@@ -25,8 +25,8 @@ The portfolio contains two production-deployed Rust projects: a multi-service ta
 | Finding | Status |
 |---|---|
 | FINDING-01 | ⚠️ Partially Remediated — tfplan purged; `.terraform/` provider binaries newly committed, needs purge |
-| FINDING-02 | ⚠️ Code fixed — `terraform apply` pending |
-| FINDING-03 | ⚠️ Code fixed (ai-orchestrator only) — `terraform apply` pending |
+| FINDING-02 | ✅ Fully Remediated |
+| FINDING-03 | ✅ Remediated (ai-orchestrator restricted; domain services intentionally public) |
 | FINDING-04 | ✅ Fully Remediated |
 | FINDING-05 | ✅ Fully Remediated |
 | FINDING-06 | ⚠️ Partially Remediated — dev bypass removed; 8 data handlers still unauthenticated |
@@ -142,11 +142,11 @@ env {
 }
 ```
 
-#### Remediation Status — ⚠️ Code Fixed, `terraform apply` Pending
+#### Remediation Status — ✅ Fully Remediated
 
-- The `authorized_networks { value = "0.0.0.0/0" }` block has been removed from `cloud_sql.tf` in commit `529427f`. ✅
-- Cloud Run services now connect via the Cloud SQL connector using `INSTANCE_CONNECTION_NAME` — no public IP range required.
-- **Live infrastructure is unchanged** until `terraform apply` is run against the GCP project.
+- The `authorized_networks { value = "0.0.0.0/0" }` block removed from `cloud_sql.tf` in commit `529427f`. ✅
+- Cloud Run services connect via the Cloud SQL connector using `INSTANCE_CONNECTION_NAME` — no public IP range required. ✅
+- `terraform apply` run 2026-03-15 — live infrastructure updated. ✅
 
 ---
 
@@ -192,12 +192,12 @@ resource "google_cloud_run_v2_service_iam_member" "orchestrator_invoker" {
 
 For the public-facing Rust domain services, keep `allUsers` but add rate limiting at the Cloud Armor or load balancer level and ensure the application-level JWT validation is never bypassable.
 
-#### Remediation Status — ⚠️ Code Fixed, `terraform apply` Pending
+#### Remediation Status — ✅ Remediated
 
 - AI orchestrator ingress changed to `INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER` in commit `529427f`. ✅
 - AI orchestrator IAM grant changed from `allUsers` to the Cloud Run service account in commit `529427f`. ✅
-- The 8 Rust domain services intentionally remain `INGRESS_TRAFFIC_ALL` / `allUsers` — these are public APIs with JWT enforcement at the application layer.
-- **Live infrastructure is unchanged** until `terraform apply` is run against the GCP project.
+- The 8 Rust domain services intentionally remain `INGRESS_TRAFFIC_ALL` / `allUsers` — public APIs with JWT enforcement at the application layer.
+- `terraform apply` run 2026-03-15 — live infrastructure updated. ✅
 
 ---
 
