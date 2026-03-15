@@ -27,7 +27,7 @@ Production-grade cloud engineering projects demonstrating Rust, Python, TypeScri
 | `search-service` | Rust / Axum | Fly.io | Cross-domain search |
 | `ai-orchestrator-service` | Python / FastAPI | Fly.io | LLM-backed goal-to-task planner (Claude API) |
 | `auth-service` | Python / FastAPI | Fly.io | JWT issuance and verification |
-| `frontend-service` | React 19 / Vite / TypeScript | GitHub Pages | Portfolio site, Kanban board, admin dashboard |
+| `frontend-service` | React 19 / Vite / TypeScript | GitHub Pages | Portfolio site, admin dashboard |
 
 #### Architecture
 
@@ -43,7 +43,6 @@ Production-grade cloud engineering projects demonstrating Rust, Python, TypeScri
 
 #### Key features
 
-- Kanban board with drag-and-drop task management
 - AI goal planner — describe a goal, generate structured sub-tasks via LLM
 - JWT auth with cross-service token validation (role-based: user / planner / admin)
 - Admin dashboard — request audit logs, per-user activity, aggregated CRM metrics
