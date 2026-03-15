@@ -1,137 +1,189 @@
 # Portfolio
 
-A collection of production-grade software engineering projects demonstrating Rust, Python, and TypeScript across cloud-native architectures.
+Production-grade cloud engineering projects demonstrating Rust, Python, TypeScript, Go, and Terraform across AWS and GCP.
+
+**Live site:** https://rodmen07.github.io/frontend-service/
 
 ---
 
 ## Projects
 
-### 1. [TaskForge — Microservices Platform](./microservices/)
+### 1. [InfraPortal — Microservices Platform](./microservices/)
 
-A fully deployed multi-service task management ecosystem. Nine independently deployed services communicate over HTTP with JWT-protected APIs and a React frontend.
+9-service platform independently deployed on Google Cloud Run with Terraform IaC, JWT authentication, AI integration, and full CI/CD. Accompanied by two standalone infrastructure modules.
 
-**Live site:** https://rodmen07.github.io/frontend-service/
+#### Services
+
+| Service | Language | Deployment | Role |
+|---------|----------|-----------|------|
+| `task-api-service` | Rust / Axum | Fly.io | Core task CRUD, AI planner proxy, audit log |
+| `accounts-service` | Rust / Axum | Fly.io | Account and tenant domain |
+| `contacts-service` | Rust / Axum | Fly.io | Contact and lead domain, cross-service account validation |
+| `activities-service` | Rust / Axum | Fly.io | Activity tracking |
+| `automation-service` | Rust / Axum | Fly.io | Automation rules |
+| `integrations-service` | Rust / Axum | Fly.io | Third-party integration hooks |
+| `opportunities-service` | Rust / Axum | Fly.io | Sales opportunity domain |
+| `reporting-service` | Rust / Axum | Fly.io | Aggregated reports |
+| `search-service` | Rust / Axum | Fly.io | Cross-domain search |
+| `ai-orchestrator-service` | Python / FastAPI | Fly.io | LLM-backed goal-to-task planner (Claude API) |
+| `auth-service` | Python / FastAPI | Fly.io | JWT issuance and verification |
+| `frontend-service` | React 19 / Vite / TypeScript | GitHub Pages | Portfolio site, Kanban board, admin dashboard |
 
 #### Architecture
 
 ```
   React/Vite UI (GitHub Pages)
-        |
-  Rust/Axum task-api (Cloud Run / Fly.io)
-        |                    |
-  Python AI Orchestrator   Python Auth Service
-        |
-  Domain microservices (Rust/Axum, SQLite)
+        │
+  Rust/Axum task-api  ──  Python AI Orchestrator (Claude API)
+        │
+  Domain microservices (Rust/Axum, PostgreSQL/SQLite)
   accounts · contacts · activities · automation
   integrations · opportunities · reporting · search
 ```
 
-#### Services
-
-| Service | Language | Role |
-|---|---|---|
-| `task-api-service` | Rust / Axum | Core task CRUD, AI planner proxy, admin metrics, audit log |
-| `accounts-service` | Rust / Axum | Account and tenant domain |
-| `contacts-service` | Rust / Axum | Contact and lead domain, cross-service account validation |
-| `activities-service` | Rust / Axum | Activity tracking |
-| `automation-service` | Rust / Axum | Automation rules |
-| `integrations-service` | Rust / Axum | Third-party integration hooks |
-| `opportunities-service` | Rust / Axum | Sales opportunity domain |
-| `reporting-service` | Rust / Axum | Aggregated reports |
-| `search-service` | Rust / Axum | Cross-domain search |
-| `ai-orchestrator-service` | Python / FastAPI | LLM-backed goal-to-task planner (Claude API via OpenRouter) |
-| `auth-service` | Python / FastAPI | JWT issuance, verification, Decap CMS GitHub OAuth |
-| `frontend-service` | React 19 / Vite / TypeScript | Kanban board, AI planner UI, admin dashboard, CMS integration |
-
 #### Key features
 
-- **Kanban board** with drag-and-drop task management
-- **AI goal planner** — describe a goal, generate structured sub-tasks via LLM
-- **JWT auth** — role-based access (user / planner / admin)
-- **Admin dashboard** — request audit logs, per-user activity, aggregated metrics
-- **Story-point gamification** — progression system tied to task completion
-- **Decap CMS** — browser-based content editing backed by GitHub
-- **Load testing** — k6 harness with latency and error-rate thresholds
-- **Terraform** — full IaC for GCP Artifact Registry, Cloud Run, and secrets
+- Kanban board with drag-and-drop task management
+- AI goal planner — describe a goal, generate structured sub-tasks via LLM
+- JWT auth with cross-service token validation (role-based: user / planner / admin)
+- Admin dashboard — request audit logs, per-user activity, aggregated CRM metrics
+- Full CI/CD via GitHub Actions — per-service Docker builds, automated deploys to Cloud Run
+- Terraform IaC for GCP baseline: Cloud Run, Cloud SQL, Artifact Registry, Secret Manager
 
-#### Tech highlights
+#### Tech
 
-- Rust Axum 0.8, sqlx 0.8 (compile-time SQL), SQLite, jsonwebtoken
-- Python FastAPI, Anthropic Claude API
-- React 19, Vite, Tailwind CSS v3, TypeScript strict mode
-- GitHub Actions CI (fmt, clippy, tests, deploy)
-- Deployed on Fly.io (backend services) and GitHub Pages (frontend)
+Rust Axum 0.8 · sqlx 0.8 · PostgreSQL · Python FastAPI · Anthropic Claude API · React 19 · Vite · Tailwind CSS v3 · TypeScript · Terraform · GitHub Actions · Docker · OIDC (Workload Identity Federation)
+
+---
+
+### 1a. [SOC 2 Baseline — Terraform Module](./microservices/terraform-soc2-baseline/)
+
+Cloud-agnostic GCP + AWS Terraform module implementing 9 SOC 2 Type II controls as reusable infrastructure code. Extracted from InfraPortal's security hardening and designed to be forked.
+
+#### Controls implemented
+
+| Control | GCP | AWS |
+|---------|-----|-----|
+| CC6.1 — Logical access | Per-service service accounts, no owner/editor roles | Per-service IAM roles, resource-scoped ARNs |
+| CC6.2 — Authentication | Workload Identity Federation (OIDC), no SA key files | OIDC role assumption only |
+| CC6.3 — Privileged access | Minimum required roles only | Inline policies, no wildcard actions |
+| CC6.7 — Secrets management | Secret Manager, SA-bound IAM | Secrets Manager, KMS CMK encryption |
+| CC7.2 — System monitoring | Cloud Audit Logs + GCS sink | CloudTrail multi-region + S3 |
+| CC7.3 — Incident detection | Cloud Logging alert skeleton | CloudWatch root login alarm |
+| CC8.1 — Change management | `prevent_destroy` on secrets | S3 versioning + DynamoDB state lock |
+| CC6.8 — Non-root containers | USER directive requirement documented | ECS task def `user: "65534"` |
+| A1.2 — Availability | Cloud Run `min_instances`, Cloud SQL backups | Multi-AZ subnets, ECS `desired_count ≥ 1` |
+
+**Tech:** Terraform · GCP · AWS · Secret Manager · Secrets Manager · KMS · CloudTrail · VPC · IAM · OIDC
+
+---
+
+### 1b. [CI/CD Pipeline Template](./microservices/.github/workflows/deploy-pipeline.yml)
+
+Cloud-agnostic GitHub Actions reference architecture for multi-environment deployments. Extends InfraPortal's existing CI/CD with full promotion gates and automated rollback on both GCP and AWS.
+
+#### Promotion flow
+
+```
+test  →  deploy-staging (auto, OIDC)  →  ⏸ approval  →  deploy-prod (OIDC)
+          ↓ health-check /health                         ↓ health-check /health
+          ↓ rollback on failure                          ↓ rollback on failure
+```
+
+- **Environment-scoped OIDC** — staging and production each hold isolated credential sets; GitHub injects the correct set automatically
+- **Manual approval gate** — production environment requires reviewer approval before deploy job runs
+- **Automated rollback** — GCP via `gcloud run services update-traffic --to-revisions PREVIOUS=100`; AWS via `aws ecs update-service --task-definition <previous-ARN>`
+- **Dockerfile lint** — blocks deploy if any service image is missing a `USER` directive (CC6.8)
+
+**Tech:** GitHub Actions · GCP Cloud Run · AWS ECS / Fargate · OIDC · Rust · Python · Docker · Bash
 
 ---
 
 ### 2. [DynamoDB Medallion Pipeline Prototype](./dynamodb_prototype/)
 
-A Rust prototype demonstrating an idempotent CloudTrail-style event ingestion pipeline backed by AWS DynamoDB, with optional Splunk HEC forwarding and a live inspection dashboard.
+Rust + Go prototype demonstrating exactly-once cloud audit log delivery via DynamoDB conditional writes, with a live inspection dashboard and Go pipeline monitor deployed on Fly.io.
 
 #### Pipeline
 
 ```
-Raw JSON event
-      |
-   Bronze  →  stage#bronze       (raw payload stored in DynamoDB)
-      |
-   Silver  →  stage#silver       (normalised event shape)
-      |
-    Gold   →  stage#gold         (derived risk metric + downstream routing)
-      |
-   Sink    →  Splunk HEC / analytics (optional, configurable)
+Raw event (CloudTrail / GCP Cloud Logging / arbitrary JSON)
+      │
+   Bronze  →  stage#bronze#<uuid>      raw payload, immutable
+      │
+   Silver  →  stage#silver#<uuid>      normalised, typed, PII-safe
+      │
+    Gold   →  stage#gold#<uuid>        aggregated metrics, downstream-ready
+      │
+   Sink    →  Splunk HEC / analytics   configurable, skipped gracefully if absent
 ```
-
-All stages write to a single DynamoDB table using `pk = <event_id>` and `sk = stage#<name>`. Idempotency state is tracked at `sk = state`.
 
 #### Components
 
-| Binary | Role |
-|---|---|
-| `run_pipeline` | End-to-end medallion flow (Bronze → Silver → Gold) |
-| `ingest` | Write raw event as Bronze record |
-| `process_bronze` | Promote Bronze → Silver |
-| `process_silver` | Promote Silver → Gold |
-| `dashboard` | Axum HTTP server — serves static UI + DynamoDB-backed inspection APIs |
+| Binary / Service | Language | Role |
+|-----------------|----------|------|
+| `ingest` | Rust | Write raw event as Bronze record |
+| `process_bronze` | Rust | Promote Bronze → Silver |
+| `process_silver` | Rust | Promote Silver → Gold |
+| `dashboard` | Rust / Axum | HTTP server — DynamoDB inspection APIs + admin UI |
+| `go-pipeline-monitor` | Go | Pipeline stage counts + upstream service health checks |
 
 #### Key features
 
-- **Idempotent writes** — deterministic sort keys and conditional expressions prevent duplicate processing
-- **Pluggable sink** — Splunk HEC forwarding with configurable timeout and retry; skipped gracefully when credentials are absent
-- **Dashboard** — containerised Axum service (port 8080) for live event inspection
-- **SAM / CloudFormation** — `template.yaml` for Lambda container deployment
-- **OIDC setup guide** — docs for keyless CI-to-AWS authentication
+- **Idempotent writes** — `begins_with(sk, "stage#<tier>#")` scan + conditional PutItem prevents duplicate processing
+- **`/promote` endpoint** — advance any record Bronze → Silver → Gold via REST (`POST /promote`)
+- **Go pipeline monitor** — parallel DynamoDB scans with paginated `Scan`, structured JSON error responses, CORS origin allowlist
+- **Pluggable sink** — Splunk HEC with configurable timeout and retry
+- **Security-hardened** — all dashboard endpoints gated behind `require_admin`; OIDC CI migration; dev bypass removed
 
-#### Tech highlights
+#### Tech
 
-- Rust async (Tokio), `aws-sdk-dynamodb`, `reqwest`, Axum 0.6
-- Single-table DynamoDB design with stage-prefixed sort keys
-- Docker + AWS SAM for Lambda and ECS/Fargate deployment
-- Deployable to Cloud Run, ECS/Fargate, or AWS Lambda containers
+Rust async (Tokio) · `aws-sdk-dynamodb` · Axum 0.8 · Go 1.22 · AWS SDK for Go v2 · Single-table DynamoDB design · Docker · Fly.io · AWS SAM / CloudFormation
 
 ---
 
-## Repository Layout
+## Repository layout
 
 ```
 Portfolio/
-├── microservices/          # TaskForge multi-service platform
-│   ├── accounts-service/
-│   ├── contacts-service/
-│   ├── activities-service/
-│   ├── automation-service/
-│   ├── integrations-service/
-│   ├── opportunities-service/
-│   ├── reporting-service/
-│   ├── search-service/
+├── microservices/                        # InfraPortal platform
+│   ├── accounts-service/                 # Rust/Axum, PostgreSQL
+│   ├── contacts-service/                 #   ↳ cross-service account validation
+│   ├── activities-service/               # Rust/Axum, SQLite
+│   ├── automation-service/               #   ↳ workflow rules
+│   ├── integrations-service/             #   ↳ third-party hooks
+│   ├── opportunities-service/            #   ↳ sales pipeline
+│   ├── reporting-service/                #   ↳ aggregated reports
+│   ├── search-service/                   #   ↳ cross-domain search
 │   ├── standalones/
-│   │   ├── backend-service/        # task-api-service
-│   │   ├── frontend-service/       # React UI
-│   │   ├── auth-service/           # Python JWT service
-│   │   └── ai-orchestrator-service/ # Python LLM planner
-│   └── terraform/                  # GCP infrastructure
-└── dynamodb_prototype/     # DynamoDB medallion pipeline
-    ├── src/                # Rust pipeline + dashboard source
-    ├── docs/               # ML pipeline case study, OIDC setup
-    └── template.yaml       # AWS SAM / CloudFormation
+│   │   ├── backend-service/              # task-api (Rust/Axum, Fly.io)
+│   │   ├── frontend-service/             # React 19 UI (GitHub Pages)
+│   │   ├── auth-service/                 # Python JWT service
+│   │   └── ai-orchestrator-service/      # Python / Claude API
+│   ├── terraform-soc2-baseline/          # Cloud-agnostic SOC 2 module
+│   │   ├── modules/gcp/                  #   GCP sub-module (8 .tf files)
+│   │   └── modules/aws/                  #   AWS sub-module (8 .tf files)
+│   ├── docs/cicd-template/               # CI/CD reference template docs
+│   │   └── scripts/                      #   health-check, rollback-gcp, rollback-aws
+│   └── .github/workflows/
+│       ├── rust.yml                      # Primary CI (test, audit, deploy)
+│       └── deploy-pipeline.yml           # Reference multi-env promotion template
+└── dynamodb_prototype/                   # DynamoDB medallion pipeline
+    ├── src/bin/                          # Rust pipeline binaries + dashboard
+    ├── go-pipeline-monitor/              # Go service (Fly.io)
+    ├── docs/                             # Case study, OIDC setup guide
+    └── template.yaml                     # AWS SAM / CloudFormation
 ```
+
+---
+
+## Deployment summary
+
+| App | Platform | URL |
+|-----|----------|-----|
+| frontend-service | GitHub Pages | https://rodmen07.github.io/frontend-service/ |
+| task-api-service | Fly.io | https://backend-service-rodmen07-v2.fly.dev |
+| accounts-service | Fly.io | https://accounts-service.fly.dev |
+| contacts-service | Fly.io | https://contacts-service.fly.dev |
+| ai-orchestrator | Fly.io | https://ai-orchestrator-service-rodmen07.fly.dev |
+| dashboard (Rust) | Fly.io | https://dynamodb-dashboard-rodmen07.fly.dev |
+| go-pipeline-monitor | Fly.io | https://go-pipeline-monitor-rodmen07.fly.dev |
