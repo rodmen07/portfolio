@@ -1,0 +1,6 @@
+[submodule "microservices"]
+	path = microservices
+	url = https://github.com/rodmen07/microservices.git
+[submodule "dynamodb_prototype"]
+	path = dynamodb_prototype
+	url = https://github.com/rodmen07/dynamodb_prototype.git
