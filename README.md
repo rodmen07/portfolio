@@ -98,6 +98,35 @@ test  →  deploy-staging (auto, OIDC)  →  ⏸ approval  →  deploy-prod (OID
 
 ---
 
+### 3. [Observaboard — Django REST API](./observaboard/) *(in progress)*
+
+Webhook event ingestion and classification API demonstrating Django REST Framework, Celery async workers, PostgreSQL full-text search, and dual authentication (JWT + API key).
+
+#### Architecture
+
+```
+External source  →  POST /api/ingest/  (API key auth)
+                         │
+                   Celery worker  →  classify(event)  →  FTS index update
+                         │
+               GET /api/events/search/?q=  (JWT auth)
+               Django Admin  →  browse / manage events
+```
+
+#### Key features
+
+- Webhook ingestion with API key authentication
+- Celery async classification — assigns category (deployment / security / alert / metric / info) and severity (low / medium / high / critical) from raw payload
+- PostgreSQL `SearchVectorField` + `GinIndex` — full-text search over event summaries
+- Django Admin — browse, filter, and manage ingested events
+- Dual auth — JWT (`djangorestframework-simplejwt`) for API consumers, API key for ingest sources
+
+#### Tech
+
+Django 5 · Django REST Framework · Celery · Redis · PostgreSQL · `djangorestframework-simplejwt` · Docker · Fly.io
+
+---
+
 ### 2. [DynamoDB Medallion Pipeline Prototype](./dynamodb_prototype/)
 
 Rust + Go prototype demonstrating exactly-once cloud audit log delivery via DynamoDB conditional writes, with a live inspection dashboard and Go pipeline monitor deployed on Fly.io.
@@ -132,7 +161,8 @@ Raw event (CloudTrail / GCP Cloud Logging / arbitrary JSON)
 - **`/promote` endpoint** — advance any record Bronze → Silver → Gold via REST (`POST /promote`)
 - **Go pipeline monitor** — parallel DynamoDB scans with paginated `Scan`, structured JSON error responses, CORS origin allowlist
 - **Pluggable sink** — Splunk HEC with configurable timeout and retry
-- **Security-hardened** — all dashboard endpoints gated behind `require_admin`; OIDC CI migration; dev bypass removed
+- **Security-hardened** — pipeline endpoints gated behind `require_admin`; OIDC CI migration; dev bypass removed
+- **Contact form inbox** — portfolio contact form POSTs to `/api/contact`; messages stored in DynamoDB and readable in the admin dashboard (no third-party email service)
 
 #### Tech
 
@@ -144,6 +174,12 @@ Rust async (Tokio) · `aws-sdk-dynamodb` · Axum 0.8 · Go 1.22 · AWS SDK for G
 
 ```
 Portfolio/
+├── observaboard/                         # Django REST API (in progress)
+│   ├── observaboard/                     #   Django project (settings, urls, celery)
+│   ├── events/                           #   App: models, views, tasks, serializers
+│   ├── requirements.txt
+│   ├── Dockerfile
+│   └── fly.toml
 ├── microservices/                        # InfraPortal platform
 │   ├── accounts-service/                 # Rust/Axum, PostgreSQL
 │   ├── contacts-service/                 #   ↳ cross-service account validation
@@ -186,3 +222,14 @@ Portfolio/
 | ai-orchestrator | Fly.io | https://ai-orchestrator-service-rodmen07.fly.dev |
 | dashboard (Rust) | Fly.io | https://dynamodb-dashboard-rodmen07.fly.dev |
 | go-pipeline-monitor | Fly.io | https://go-pipeline-monitor-rodmen07.fly.dev |
+
+---
+
+## Next steps
+
+| # | Task | Area |
+|---|------|------|
+| 1 | **Build `observaboard`** — scaffold Django project, Event model + FTS, Celery worker, dual auth (JWT + API key), Dockerfile, deploy to Fly.io | New project |
+| 2 | **Migrate frontend to `react-router-dom`** — replace the hash-router in `main.tsx` | frontend-service |
+| 3 | **Add `backend-service` to Rust workspace** — merge standalone into root `Cargo.toml` | microservices |
+| 4 | **Go portfolio project** — new standalone Go service | New project |
