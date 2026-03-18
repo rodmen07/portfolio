@@ -27,6 +27,7 @@ Production-grade cloud engineering projects demonstrating Rust, Python, TypeScri
 | `search-service` | Rust / Axum | Fly.io | Cross-domain search |
 | `ai-orchestrator-service` | Python / FastAPI | Fly.io | LLM-backed goal-to-task planner (Claude API) |
 | `auth-service` | Python / FastAPI | Fly.io | JWT issuance and verification |
+| `event-stream-service` | Go | Fly.io | SSE hub — real-time event fan-out with ring buffer replay |
 | `frontend-service` | React 19 / Vite / TypeScript | GitHub Pages | Portfolio site, admin dashboard |
 
 #### Architecture
@@ -51,7 +52,7 @@ Production-grade cloud engineering projects demonstrating Rust, Python, TypeScri
 
 #### Tech
 
-Rust Axum 0.8 · sqlx 0.8 · PostgreSQL · Python FastAPI · Anthropic Claude API · React 19 · Vite · Tailwind CSS v3 · TypeScript · Terraform · GitHub Actions · Docker · OIDC (Workload Identity Federation)
+Rust Axum 0.8 · sqlx 0.8 · PostgreSQL · Python FastAPI · Go · Anthropic Claude API · React 19 · Vite · Tailwind CSS v3 · TypeScript · Terraform · GitHub Actions · Docker · OIDC (Workload Identity Federation)
 
 ---
 
@@ -98,7 +99,7 @@ test  →  deploy-staging (auto, OIDC)  →  ⏸ approval  →  deploy-prod (OID
 
 ---
 
-### 3. [Observaboard — Django REST API](./observaboard/) *(in progress)*
+### 3. [Observaboard — Django REST API](./observaboard/)
 
 Webhook event ingestion and classification API demonstrating Django REST Framework, Celery async workers, PostgreSQL full-text search, and dual authentication (JWT + API key).
 
@@ -174,7 +175,7 @@ Rust async (Tokio) · `aws-sdk-dynamodb` · Axum 0.8 · Go 1.22 · AWS SDK for G
 
 ```
 Portfolio/
-├── observaboard/                         # Django REST API (in progress)
+├── observaboard/                         # Django REST API (Fly.io)
 │   ├── observaboard/                     #   Django project (settings, urls, celery)
 │   ├── events/                           #   App: models, views, tasks, serializers
 │   ├── requirements.txt
@@ -193,7 +194,8 @@ Portfolio/
 │   │   ├── backend-service/              # task-api (Rust/Axum, Fly.io)
 │   │   ├── frontend-service/             # React 19 UI (GitHub Pages)
 │   │   ├── auth-service/                 # Python JWT service
-│   │   └── ai-orchestrator-service/      # Python / Claude API
+│   │   ├── ai-orchestrator-service/      # Python / Claude API
+│   │   └── event-stream-service/         # Go SSE hub (Fly.io)
 │   ├── terraform-soc2-baseline/          # Cloud-agnostic SOC 2 module
 │   │   ├── modules/gcp/                  #   GCP sub-module (8 .tf files)
 │   │   └── modules/aws/                  #   AWS sub-module (8 .tf files)
@@ -222,14 +224,23 @@ Portfolio/
 | ai-orchestrator | Fly.io | https://ai-orchestrator-service-rodmen07.fly.dev |
 | dashboard (Rust) | Fly.io | https://dynamodb-dashboard-rodmen07.fly.dev |
 | go-pipeline-monitor | Fly.io | https://go-pipeline-monitor-rodmen07.fly.dev |
+| observaboard | Fly.io | https://observaboard-rodmen07.fly.dev |
+| event-stream-service | Fly.io | https://event-stream-service.fly.dev |
 
 ---
 
-## Next steps
+## Roadmap
 
-| # | Task | Area |
-|---|------|------|
-| 1 | **Build `observaboard`** — scaffold Django project, Event model + FTS, Celery worker, dual auth (JWT + API key), Dockerfile, deploy to Fly.io | New project |
-| 2 | **Migrate frontend to `react-router-dom`** — replace the hash-router in `main.tsx` | frontend-service |
-| 3 | **Add `backend-service` to Rust workspace** — merge standalone into root `Cargo.toml` | microservices |
-| 4 | **Go portfolio project** — new standalone Go service | New project |
+### v0.4 — Language Breadth & AI Depth *(In Progress)*
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v0.4.1 | AI Consulting Feature | ✅ Published |
+| v0.4.2 | Django REST API (`observaboard`) | ✅ Published |
+| v0.4.3 | Go Service | ✅ Published |
+
+**Completion states:** Planned → Implemented → Published. Published means all release locations updated (see [CLAUDE.md](./microservices/CLAUDE.md) § Release Locations).
+
+### Backlog
+
+- Client-facing project dashboard (longer-term)
