@@ -231,7 +231,7 @@ Portfolio/
 
 ## Roadmap
 
-### v0.4 — Language Breadth & AI Depth *(In Progress)*
+### v0.4 — Language Breadth & AI Depth ✅ Complete
 
 | Sub-version | Feature | Status |
 |-------------|---------|--------|
@@ -239,8 +239,13 @@ Portfolio/
 | v0.4.2 | Django REST API (`observaboard`) | ✅ Published |
 | v0.4.3 | Go Service | ✅ Published |
 | v0.4.4 | Frontend UI Expansion — CRM CRUD, Live Feed, Search, Reports, Observaboard pages | ✅ Published |
-| v0.4.5 | reporting-service production upgrade (SQLite, JWT auth, saved report CRUD, /dashboard) | 🔲 Planned |
-| v0.4.6 | search-service production upgrade (cross-domain fan-out search) | 🔲 Planned |
+
+### v0.5 — Platform Completeness *(Planned)*
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v0.5.1 | reporting-service production upgrade (SQLite, JWT auth, saved report CRUD, /dashboard) | 🔲 Planned |
+| v0.5.2 | search-service production upgrade (cross-domain fan-out search) | 🔲 Planned |
 
 **Completion states:** Planned → Implemented → Published. Published means all release locations updated (see [CLAUDE.md](./microservices/CLAUDE.md) § Release Locations).
 
