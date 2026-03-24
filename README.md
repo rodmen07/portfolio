@@ -10,7 +10,7 @@ Production-grade cloud engineering projects demonstrating Rust, Python, TypeScri
 
 ### 1. [InfraPortal — Microservices Platform](./microservices/)
 
-9-service platform independently deployed on Google Cloud Run with Terraform IaC, JWT authentication, AI integration, and full CI/CD. Accompanied by two standalone infrastructure modules.
+9-service platform with SQLite persistence, JWT authentication, and AI integration. All services production-grade with full CRUD, deployed on Fly.io. Accompanied by two standalone infrastructure modules.
 
 #### Services
 
@@ -240,15 +240,26 @@ Portfolio/
 | v0.4.3 | Go Service | ✅ Published |
 | v0.4.4 | Frontend UI Expansion — CRM CRUD, Live Feed, Search, Reports, Observaboard pages | ✅ Published |
 
-### v0.5 — Platform Completeness *(Planned)*
+### v0.5 — Platform Completeness ✅ Complete
 
 | Sub-version | Feature | Status |
 |-------------|---------|--------|
-| v0.5.1 | reporting-service production upgrade (SQLite, JWT auth, saved report CRUD, /dashboard) | 🔲 Planned |
-| v0.5.2 | search-service production upgrade (cross-domain fan-out search) | 🔲 Planned |
+| v0.5.1 | reporting-service production upgrade (SQLite, JWT auth, saved report CRUD, /dashboard) | ✅ Published |
+| v0.5.2 | search-service production upgrade (cross-domain fan-out search, write-through indexing) | ✅ Published |
+| v0.5.3 | activities-service production upgrade (SQLite, JWT auth, CRUD) | ✅ Published |
+| v0.5.4 | automation-service production upgrade (SQLite, JWT auth, workflow rules) | ✅ Published |
+| v0.5.5 | integrations-service production upgrade (SQLite, JWT auth, connection registry) | ✅ Published |
+| v0.5.6 | opportunities-service production upgrade (SQLite, JWT auth, stage tracking) | ✅ Published |
 
 **Completion states:** Planned → Implemented → Published. Published means all release locations updated (see [CLAUDE.md](./microservices/CLAUDE.md) § Release Locations).
 
+### v1.0 — User Dashboard *(Planned)*
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.0.1 | User dashboard — scoping & design | 🔲 Planned |
+
 ### Backlog
 
-- Client-facing project dashboard (longer-term)
+- Cross-service integration features (activities linking to real accounts/contacts)
+- Fly.io deployment for remaining services
