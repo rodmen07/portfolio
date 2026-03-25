@@ -190,12 +190,12 @@ Portfolio/
 │   ├── opportunities-service/            #   ↳ sales pipeline
 │   ├── reporting-service/                #   ↳ aggregated reports
 │   ├── search-service/                   #   ↳ cross-domain search
-│   ├── standalones/
-│   │   ├── backend-service/              # task-api (Rust/Axum, Fly.io)
-│   │   ├── frontend-service/             # React 19 UI (GitHub Pages)
-│   │   ├── auth-service/                 # Python JWT service
-│   │   ├── ai-orchestrator-service/      # Python / Claude API
-│   │   └── event-stream-service/         # Go SSE hub (Fly.io)
+├── standalones/                          # Standalone services moved to portfolio root
+│   ├── backend-service/                  # task-api (Rust/Axum, Fly.io)
+│   ├── frontend-service/                 # React 19 UI (GitHub Pages)
+│   ├── auth-service/                     # Python JWT service
+│   ├── ai-orchestrator-service/          # Python / Claude API
+│   └── event-stream-service/             # Go SSE hub (Fly.io)
 │   ├── terraform-soc2-baseline/          # Cloud-agnostic SOC 2 module
 │   │   ├── modules/gcp/                  #   GCP sub-module (8 .tf files)
 │   │   └── modules/aws/                  #   AWS sub-module (8 .tf files)
