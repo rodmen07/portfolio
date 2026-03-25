@@ -199,16 +199,51 @@ Portfolio/
 │   ├── terraform-soc2-baseline/          # Cloud-agnostic SOC 2 module
 │   │   ├── modules/gcp/                  #   GCP sub-module (8 .tf files)
 │   │   └── modules/aws/                  #   AWS sub-module (8 .tf files)
-│   ├── docs/cicd-template/               # CI/CD reference template docs
+│   ├── docs/cicd-template/               # CI/CD reference docs
 │   │   └── scripts/                      #   health-check, rollback-gcp, rollback-aws
 │   └── .github/workflows/
 │       ├── rust.yml                      # Primary CI (test, audit, deploy)
 │       └── deploy-pipeline.yml           # Reference multi-env promotion template
+│   └── scripts/
+│       └── run-checks.ps1                # Full workspace test runner
 └── dynamodb_prototype/                   # DynamoDB medallion pipeline
     ├── src/bin/                          # Rust pipeline binaries + dashboard
     ├── go-pipeline-monitor/              # Go service (Fly.io)
     ├── docs/                             # Case study, OIDC setup guide
     └── template.yaml                     # AWS SAM / CloudFormation
+```
+
+## Running checks
+
+This repository uses a centralized test runner in `microservices/scripts/run-checks.ps1`.
+
+### Option 1: run from microservices directory
+
+```powershell
+cd d:\Projects\Portfolio\microservices
+.\scripts\run-checks.ps1
+```
+
+### Option 2: run from repo root (convenience wrapper)
+
+```powershell
+cd d:\Projects\Portfolio
+.\run-checks.ps1
+```
+
+### Recommended local verification (service-level)
+
+```powershell
+cd d:\Projects\Portfolio\microservices\reporting-service
+$env:AUTH_JWT_SECRET='dev-insecure-secret-change-me'
+cargo test
+
+cd ..\accounts-service
+$env:TEST_DATABASE_URL='sqlite::memory:'
+$env:AUTH_JWT_SECRET='dev-insecure-secret-change-me'
+cargo test
+
+# repeat for contacts-service, opportunities-service, activities-service, etc.
 ```
 
 ---
