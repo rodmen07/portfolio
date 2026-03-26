@@ -190,22 +190,21 @@ Portfolio/
 │   ├── opportunities-service/            #   ↳ sales pipeline
 │   ├── reporting-service/                #   ↳ aggregated reports
 │   ├── search-service/                   #   ↳ cross-domain search
-├── standalones/                          # Standalone services moved to portfolio root
-│   ├── backend-service/                  # task-api (Rust/Axum, Fly.io)
-│   ├── frontend-service/                 # React 19 UI (GitHub Pages)
-│   ├── auth-service/                     # Python JWT service
-│   ├── ai-orchestrator-service/          # Python / Claude API
-│   └── event-stream-service/             # Go SSE hub (Fly.io)
-│   ├── terraform-soc2-baseline/          # Cloud-agnostic SOC 2 module
-│   │   ├── modules/gcp/                  #   GCP sub-module (8 .tf files)
-│   │   └── modules/aws/                  #   AWS sub-module (8 .tf files)
-│   ├── docs/cicd-template/               # CI/CD reference docs
-│   │   └── scripts/                      #   health-check, rollback-gcp, rollback-aws
-│   └── .github/workflows/
-│       ├── rust.yml                      # Primary CI (test, audit, deploy)
-│       └── deploy-pipeline.yml           # Reference multi-env promotion template
-│   └── scripts/
-│       └── run-checks.ps1                # Full workspace test runner
+├── backend-service/                      # task-api (Rust/Axum, Fly.io)
+├── frontend-service/                     # React 19 UI (GitHub Pages)
+├── auth-service/                         # Python JWT service
+├── ai-orchestrator-service/              # Python / Claude API
+├── event-stream-service/                 # Go SSE hub (Fly.io)
+├── terraform-soc2-baseline/              # Cloud-agnostic SOC 2 module
+│   ├── modules/gcp/                      #   GCP sub-module (8 .tf files)
+│   └── modules/aws/                      #   AWS sub-module (8 .tf files)
+└── docs/cicd-template/                   # CI/CD reference docs
+    └── scripts/                          #   health-check, rollback-gcp, rollback-aws
+    └── .github/workflows/
+        ├── rust.yml                      # Primary CI (test, audit, deploy)
+        └── deploy-pipeline.yml           # Reference multi-env promotion template
+└── scripts/
+    └── run-checks.ps1                    # Full workspace test runner
 └── dynamodb_prototype/                   # DynamoDB medallion pipeline
     ├── src/bin/                          # Rust pipeline binaries + dashboard
     ├── go-pipeline-monitor/              # Go service (Fly.io)
@@ -216,6 +215,48 @@ Portfolio/
 ## Running checks
 
 This repository uses a centralized test runner in `microservices/scripts/run-checks.ps1`.
+
+### Option 1: run from microservices directory
+
+## Submodule workflow
+
+This workspace uses git submodules for each service, where each subproject is an independently-versioned repository:
+
+- `microservices`
+- `dynamodb_prototype`
+- `ai-orchestrator-service`
+- `auth-service`
+- `backend-service`
+- `event-stream-service`
+- `frontend-service`
+- `observaboard`
+
+### Common commands
+
+- Initialize after clone:
+  - `git submodule update --init --recursive`
+- Update all submodules to latest configured commits:
+  - `git submodule update --remote --recursive`
+- Inspect submodule status:
+  - `git submodule status --recursive`
+- Commit new submodule commit pointer:
+  - `cd <submodule>; git pull origin main; cd ..; git add <submodule>; git commit -m "Update <submodule> pointer"`
+
+**Note:** run `git clean -fdx` in submodule directories only if you want a full clean state and are okay losing uncommitted local changes.
+
+### Running the workspace runner
+
+- `powershell -NoProfile -Command "Set-Location 'd:\Projects\Portfolio\microservices'; .\scripts\run-checks.ps1"`
+- To skip specific sectors: `.
+un-checks.ps1 -SkipRust -SkipPython -SkipFrontend`
+
+### 2. Option 2: run per submodule
+
+You can also run `cargo test`, `cargo clippy`, `npm run build`, etc. in each service directory directly.
+
+### 3. Option 3: run cluster tests
+
+Then continue with your existing docs.
 
 ### Option 1: run from microservices directory
 
