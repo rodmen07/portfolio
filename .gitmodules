@@ -4,3 +4,21 @@
 [submodule "dynamodb_prototype"]
 	path = dynamodb_prototype
 	url = https://github.com/rodmen07/dynamodb_prototype.git
+[submodule "ai-orchestrator-service"]
+	path = ai-orchestrator-service
+	url = https://github.com/rodmen07/ai-orchestrator-service.git
+[submodule "auth-service"]
+	path = auth-service
+	url = https://github.com/rodmen07/auth-service.git
+[submodule "backend-service"]
+	path = backend-service
+	url = https://github.com/rodmen07/backend-service.git
+[submodule "event-stream-service"]
+	path = event-stream-service
+	url = https://github.com/rodmen07/event-stream-service.git
+[submodule "frontend-service"]
+	path = frontend-service
+	url = https://github.com/rodmen07/frontend-service.git
+[submodule "observaboard"]
+	path = observaboard
+	url = https://github.com/rodmen07/observaboard.git
