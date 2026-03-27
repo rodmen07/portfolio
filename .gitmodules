@@ -22,3 +22,6 @@
 [submodule "observaboard"]
 	path = observaboard
 	url = https://github.com/rodmen07/observaboard.git
+[submodule "go-gateway"]
+	path = go-gateway
+	url = https://github.com/rodmen07/go-gateway.git
