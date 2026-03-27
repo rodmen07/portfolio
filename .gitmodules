@@ -25,3 +25,6 @@
 [submodule "go-gateway"]
 	path = go-gateway
 	url = https://github.com/rodmen07/go-gateway.git
+[submodule "projects-service"]
+	path = projects-service
+	url = https://github.com/rodmen07/projects-service.git
