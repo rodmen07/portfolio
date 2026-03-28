@@ -28,18 +28,24 @@ Production-grade cloud engineering projects demonstrating Rust, Python, TypeScri
 | `ai-orchestrator-service` | Python / FastAPI | Fly.io | LLM-backed goal-to-task planner (Claude API) |
 | `auth-service` | Python / FastAPI | Fly.io | JWT issuance and verification |
 | `event-stream-service` | Go | Fly.io | SSE hub — real-time event fan-out with ring buffer replay |
-| `frontend-service` | React 19 / Vite / TypeScript | GitHub Pages | Portfolio site, admin dashboard |
+| `go-gateway` | Go | Fly.io | API gateway — rate limiting, reverse proxy to all microservices |
+| `frontend-service` | React 19 / Vite / TypeScript | GitHub Pages | Portfolio site, admin dashboard, client portal |
 
 #### Architecture
 
 ```
   React/Vite UI (GitHub Pages)
         │
+   Go API Gateway (rate limiting, reverse proxy)
+        │
   Rust/Axum task-api  ──  Python AI Orchestrator (Claude API)
         │
   Domain microservices (Rust/Axum, PostgreSQL/SQLite)
   accounts · contacts · activities · automation
   integrations · opportunities · reporting · search
+
+  Client Portal
+  Rust projects-service (projects · milestones · deliverables · messages)
 ```
 
 #### Key features
@@ -191,7 +197,9 @@ Portfolio/
 │   ├── reporting-service/                #   ↳ aggregated reports
 │   ├── search-service/                   #   ↳ cross-domain search
 ├── backend-service/                      # task-api (Rust/Axum, Fly.io)
-├── frontend-service/                     # React 19 UI (GitHub Pages)
+├── go-gateway/                           # Go API gateway (rate limiting, reverse proxy)
+├── projects-service/                     # Client portal data service (Rust/Axum, Fly.io)
+├── frontend-service/                     # React 19 UI + client portal (GitHub Pages)
 ├── auth-service/                         # Python JWT service
 ├── ai-orchestrator-service/              # Python / Claude API
 ├── event-stream-service/                 # Go SSE hub (Fly.io)
@@ -229,7 +237,9 @@ This workspace uses git submodules for each service, where each subproject is an
 - `backend-service`
 - `event-stream-service`
 - `frontend-service`
+- `go-gateway`
 - `observaboard`
+- `projects-service`
 
 ### Common commands
 
@@ -302,6 +312,8 @@ cargo test
 | go-pipeline-monitor | Fly.io | https://go-pipeline-monitor-rodmen07.fly.dev |
 | observaboard | Fly.io | https://observaboard-rodmen07.fly.dev |
 | event-stream-service | Fly.io | https://event-stream-service.fly.dev |
+| go-gateway | Fly.io | https://go-gateway-rodmen07.fly.dev |
+| projects-service | Fly.io | https://projects-service-rodmen07.fly.dev |
 
 ---
 
@@ -329,11 +341,15 @@ cargo test
 
 **Completion states:** Planned → Implemented → Published. Published means all release locations updated (see [CLAUDE.md](./microservices/CLAUDE.md) § Release Locations).
 
-### v1.0 — User Dashboard *(Planned)*
+### v1.0 — Client Portal *(In Progress)*
 
 | Sub-version | Feature | Status |
 |-------------|---------|--------|
-| v1.0.1 | User dashboard — scoping & design | 🔲 Planned |
+| v1.0.1 | `projects-service` — Rust/Axum client portal API (projects, milestones, deliverables, messages) | ✅ Deployed |
+| v1.0.2 | `go-gateway` — Go API gateway with rate limiting and reverse proxy | ✅ Deployed |
+| v1.0.3 | Dashboard client portal tab — admin-only portal UI with project cards, milestones, deliverable progress | ✅ Published |
+| v1.0.4 | Dashboard gold/silver/bronze tabs + mock fallback data | ✅ Published |
+| v1.0.5 | OAuth / account provisioning for client users | 🔲 Planned |
 
 ### Backlog
 
