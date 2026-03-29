@@ -1,3 +1,5 @@
+![alt text](image.png)
+
 # Portfolio
 
 Production-grade cloud engineering projects demonstrating Rust, Python, TypeScript, Go, and Terraform across AWS and GCP.
