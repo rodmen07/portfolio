@@ -2,7 +2,7 @@
 
 Production-grade cloud engineering projects demonstrating Rust, Python, TypeScript, Go, and Terraform across AWS and GCP.
 
-**Live site:** https://rodmen07.github.io/frontend-service/
+**Live site:** https://rodmen07.github.io/infraportal/
 
 ---
 
@@ -10,25 +10,26 @@ Production-grade cloud engineering projects demonstrating Rust, Python, TypeScri
 
 ### 1. [InfraPortal — Microservices Platform](./microservices/)
 
-9-service platform with SQLite persistence, JWT authentication, and AI integration. All services production-grade with full CRUD, deployed on Fly.io. Accompanied by two standalone infrastructure modules.
+9-service CRM platform with SQLite persistence, JWT authentication, and AI integration. All 11 backend services deployed on GCP Cloud Run (scale-to-zero, us-central1) with GitHub Actions OIDC CI/CD. Includes a client portal with GitHub + Google OAuth and an admin provisioning UI.
 
 #### Services
 
 | Service | Language | Deployment | Role |
 |---------|----------|-----------|------|
 | `task-api-service` | Rust / Axum | Fly.io | Core task CRUD, AI planner proxy, audit log |
-| `accounts-service` | Rust / Axum | Fly.io | Account and tenant domain |
-| `contacts-service` | Rust / Axum | Fly.io | Contact and lead domain, cross-service account validation |
-| `activities-service` | Rust / Axum | Fly.io | Activity tracking |
-| `automation-service` | Rust / Axum | Fly.io | Automation rules |
-| `integrations-service` | Rust / Axum | Fly.io | Third-party integration hooks |
-| `opportunities-service` | Rust / Axum | Fly.io | Sales opportunity domain |
-| `reporting-service` | Rust / Axum | Fly.io | Aggregated reports |
-| `search-service` | Rust / Axum | Fly.io | Cross-domain search |
+| `accounts-service` | Rust / Axum | GCP Cloud Run | Account and tenant domain |
+| `contacts-service` | Rust / Axum | GCP Cloud Run | Contact and lead domain, cross-service account validation |
+| `activities-service` | Rust / Axum | GCP Cloud Run | Activity tracking |
+| `automation-service` | Rust / Axum | GCP Cloud Run | Automation rules |
+| `integrations-service` | Rust / Axum | GCP Cloud Run | Third-party integration hooks |
+| `opportunities-service` | Rust / Axum | GCP Cloud Run | Sales opportunity domain |
+| `reporting-service` | Rust / Axum | GCP Cloud Run | Aggregated reports |
+| `search-service` | Rust / Axum | GCP Cloud Run | Cross-domain search |
+| `projects-service` | Rust / Axum | GCP Cloud Run | Client portal data — projects, milestones, deliverables |
 | `ai-orchestrator-service` | Python / FastAPI | Fly.io | LLM-backed goal-to-task planner (Claude API) |
-| `auth-service` | Python / FastAPI | Fly.io | JWT issuance and verification |
+| `auth-service` | Python / FastAPI | GCP Cloud Run | JWT issuance, GitHub + Google OAuth |
 | `event-stream-service` | Go | Fly.io | SSE hub — real-time event fan-out with ring buffer replay |
-| `go-gateway` | Go | Fly.io | API gateway — rate limiting, reverse proxy to all microservices |
+| `go-gateway` | Go | GCP Cloud Run | API gateway — rate limiting, reverse proxy to all microservices |
 | `frontend-service` | React 19 / Vite / TypeScript | GitHub Pages | Portfolio site, admin dashboard, client portal |
 
 #### Architecture
@@ -303,17 +304,23 @@ cargo test
 
 | App | Platform | URL |
 |-----|----------|-----|
-| frontend-service | GitHub Pages | https://rodmen07.github.io/frontend-service/ |
+| frontend-service | GitHub Pages | https://rodmen07.github.io/infraportal/ |
+| auth-service | GCP Cloud Run | https://auth-service-5gcrg4oiza-uc.a.run.app |
+| go-gateway | GCP Cloud Run | https://go-gateway-5gcrg4oiza-uc.a.run.app |
+| projects-service | GCP Cloud Run | https://projects-service-5gcrg4oiza-uc.a.run.app |
+| accounts-service | GCP Cloud Run | https://accounts-service-5gcrg4oiza-uc.a.run.app |
+| contacts-service | GCP Cloud Run | https://contacts-service-5gcrg4oiza-uc.a.run.app |
+| activities-service | GCP Cloud Run | https://activities-service-5gcrg4oiza-uc.a.run.app |
+| automation-service | GCP Cloud Run | https://automation-service-5gcrg4oiza-uc.a.run.app |
+| integrations-service | GCP Cloud Run | https://integrations-service-5gcrg4oiza-uc.a.run.app |
+| opportunities-service | GCP Cloud Run | https://opportunities-service-5gcrg4oiza-uc.a.run.app |
+| reporting-service | GCP Cloud Run | https://reporting-service-5gcrg4oiza-uc.a.run.app |
+| search-service | GCP Cloud Run | https://search-service-5gcrg4oiza-uc.a.run.app |
 | task-api-service | Fly.io | https://backend-service-rodmen07-v2.fly.dev |
-| accounts-service | Fly.io | https://accounts-service.fly.dev |
-| contacts-service | Fly.io | https://contacts-service.fly.dev |
 | ai-orchestrator | Fly.io | https://ai-orchestrator-service-rodmen07.fly.dev |
 | dashboard (Rust) | Fly.io | https://dynamodb-dashboard-rodmen07.fly.dev |
-| go-pipeline-monitor | Fly.io | https://go-pipeline-monitor-rodmen07.fly.dev |
 | observaboard | Fly.io | https://observaboard-rodmen07.fly.dev |
 | event-stream-service | Fly.io | https://event-stream-service.fly.dev |
-| go-gateway | Fly.io | https://go-gateway-rodmen07.fly.dev |
-| projects-service | Fly.io | https://projects-service-rodmen07.fly.dev |
 
 ---
 
@@ -341,17 +348,17 @@ cargo test
 
 **Completion states:** Planned → Implemented → Published. Published means all release locations updated (see [CLAUDE.md](./microservices/CLAUDE.md) § Release Locations).
 
-### v1.0 — Client Portal *(In Progress)*
+### v1.0 — Client Portal ✅ Complete
 
 | Sub-version | Feature | Status |
 |-------------|---------|--------|
-| v1.0.1 | `projects-service` — Rust/Axum client portal API (projects, milestones, deliverables, messages) | ✅ Deployed |
-| v1.0.2 | `go-gateway` — Go API gateway with rate limiting and reverse proxy | ✅ Deployed |
-| v1.0.3 | Dashboard client portal tab — admin-only portal UI with project cards, milestones, deliverable progress | ✅ Published |
-| v1.0.4 | Dashboard gold/silver/bronze tabs + mock fallback data | ✅ Published |
-| v1.0.5 | OAuth / account provisioning for client users | 🔲 Planned |
+| v1.0.1 | `projects-service` — Rust/Axum client portal API (projects, milestones, deliverables) | ✅ Published |
+| v1.0.2 | `go-gateway` — Go API gateway deployed to GCP Cloud Run | ✅ Published |
+| v1.0.3 | GCP Cloud Run migration — 11 services (OIDC + WIF, Artifact Registry, Secret Manager) | ✅ Published |
+| v1.0.4 | OAuth flows — GitHub + Google client portal sign-in with client-role JWT | ✅ Published |
+| v1.0.5 | Admin provisioning UI — create projects, milestones, deliverables; assign to client users | ✅ Published |
 
 ### Backlog
 
 - Cross-service integration features (activities linking to real accounts/contacts)
-- Fly.io deployment for remaining services
+- Persistent storage for Cloud Run services (Cloud SQL or mounted volumes)

@@ -18,7 +18,7 @@
 	url = https://github.com/rodmen07/event-stream-service.git
 [submodule "frontend-service"]
 	path = frontend-service
-	url = https://github.com/rodmen07/frontend-service.git
+	url = https://github.com/rodmen07/infraportal.git
 [submodule "observaboard"]
 	path = observaboard
 	url = https://github.com/rodmen07/observaboard.git
