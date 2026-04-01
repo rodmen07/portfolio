@@ -2,13 +2,13 @@
 set -euo pipefail
 # Use GitHub Actions workspace if available, otherwise use current directory
 if [ -n "${GITHUB_WORKSPACE:-}" ]; then
-  cd "$GITHUB_WORKSPACE"
+  ROOT_DIR="$GITHUB_WORKSPACE"
 else
-  cd "$(pwd)"
+  ROOT_DIR="$(pwd)"
 fi
 
-RESULTS_FILE="/workspace/test_results.json"
-LOG_DIR="/workspace/test_logs"
+RESULTS_FILE="$ROOT_DIR/test_results.json"
+LOG_DIR="$ROOT_DIR/test_logs"
 NDJSON="$LOG_DIR/results.ndjson"
 mkdir -p "$LOG_DIR"
 : > "$NDJSON"
