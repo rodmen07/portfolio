@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd /workspace
+# Use GitHub Actions workspace if available, otherwise use current directory
+if [ -n "${GITHUB_WORKSPACE:-}" ]; then
+  cd "$GITHUB_WORKSPACE"
+else
+  cd "$(pwd)"
+fi
 
 RESULTS_FILE="/workspace/test_results.json"
 LOG_DIR="/workspace/test_logs"
