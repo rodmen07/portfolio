@@ -1,0 +1,45 @@
+name: Run Workspace Tests With Runner Image
+
+on:
+  workflow_run:
+    workflows: ["Build Runner Image"]
+    types: [completed]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  actions: write
+  packages: read
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull runner image
+        run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/workspace-test-runner:py3.13
+          echo "Pulling $IMAGE"
+          docker pull "$IMAGE"
+
+      - name: Run workspace tests inside runner image
+        run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/workspace-test-runner:py3.13
+          docker run --rm -v "${{ github.workspace }}:/workspace" -w /workspace "$IMAGE" bash -lc "chmod +x ./run_workspace_tests.sh && ./run_workspace_tests.sh"
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: workspace-test-results
+          path: |
+            test_results.json
+            test_logs
