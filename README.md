@@ -1,8 +1,10 @@
+![alt text](image.png)
+
 # Portfolio
 
 Production-grade cloud engineering projects demonstrating Rust, Python, TypeScript, Go, and Terraform across AWS and GCP.
 
-**Live site:** https://rodmen07.github.io/frontend-service/
+**Live site:** https://rodmen07.github.io/infraportal/
 
 ---
 
@@ -10,36 +12,43 @@ Production-grade cloud engineering projects demonstrating Rust, Python, TypeScri
 
 ### 1. [InfraPortal — Microservices Platform](./microservices/)
 
-9-service platform independently deployed on Google Cloud Run with Terraform IaC, JWT authentication, AI integration, and full CI/CD. Accompanied by two standalone infrastructure modules.
+9-service CRM platform with SQLite persistence, JWT authentication, and AI integration. All 11 backend services deployed on GCP Cloud Run (scale-to-zero, us-central1) with GitHub Actions OIDC CI/CD. Includes a client portal with GitHub + Google OAuth and an admin provisioning UI.
 
 #### Services
 
 | Service | Language | Deployment | Role |
 |---------|----------|-----------|------|
 | `task-api-service` | Rust / Axum | Fly.io | Core task CRUD, AI planner proxy, audit log |
-| `accounts-service` | Rust / Axum | Fly.io | Account and tenant domain |
-| `contacts-service` | Rust / Axum | Fly.io | Contact and lead domain, cross-service account validation |
-| `activities-service` | Rust / Axum | Fly.io | Activity tracking |
-| `automation-service` | Rust / Axum | Fly.io | Automation rules |
-| `integrations-service` | Rust / Axum | Fly.io | Third-party integration hooks |
-| `opportunities-service` | Rust / Axum | Fly.io | Sales opportunity domain |
-| `reporting-service` | Rust / Axum | Fly.io | Aggregated reports |
-| `search-service` | Rust / Axum | Fly.io | Cross-domain search |
+| `accounts-service` | Rust / Axum | GCP Cloud Run | Account and tenant domain |
+| `contacts-service` | Rust / Axum | GCP Cloud Run | Contact and lead domain, cross-service account validation |
+| `activities-service` | Rust / Axum | GCP Cloud Run | Activity tracking |
+| `automation-service` | Rust / Axum | GCP Cloud Run | Automation rules |
+| `integrations-service` | Rust / Axum | GCP Cloud Run | Third-party integration hooks |
+| `opportunities-service` | Rust / Axum | GCP Cloud Run | Sales opportunity domain |
+| `reporting-service` | Rust / Axum | GCP Cloud Run | Aggregated reports |
+| `search-service` | Rust / Axum | GCP Cloud Run | Cross-domain search |
+| `projects-service` | Rust / Axum | GCP Cloud Run | Client portal data — projects, milestones, deliverables |
 | `ai-orchestrator-service` | Python / FastAPI | Fly.io | LLM-backed goal-to-task planner (Claude API) |
-| `auth-service` | Python / FastAPI | Fly.io | JWT issuance and verification |
+| `auth-service` | Python / FastAPI | GCP Cloud Run | JWT issuance, GitHub + Google OAuth |
 | `event-stream-service` | Go | Fly.io | SSE hub — real-time event fan-out with ring buffer replay |
-| `frontend-service` | React 19 / Vite / TypeScript | GitHub Pages | Portfolio site, admin dashboard |
+| `go-gateway` | Go | GCP Cloud Run | API gateway — rate limiting, reverse proxy to all microservices |
+| `frontend-service` | React 19 / Vite / TypeScript | GitHub Pages | Portfolio site, admin dashboard, client portal |
 
 #### Architecture
 
 ```
   React/Vite UI (GitHub Pages)
         │
+   Go API Gateway (rate limiting, reverse proxy)
+        │
   Rust/Axum task-api  ──  Python AI Orchestrator (Claude API)
         │
   Domain microservices (Rust/Axum, PostgreSQL/SQLite)
   accounts · contacts · activities · automation
   integrations · opportunities · reporting · search
+
+  Client Portal
+  Rust projects-service (projects · milestones · deliverables · messages)
 ```
 
 #### Key features
@@ -171,6 +180,30 @@ Rust async (Tokio) · `aws-sdk-dynamodb` · Axum 0.8 · Go 1.22 · AWS SDK for G
 
 ---
 
+### 4. [Vertex AI Second Brain Prototype](./vertexai-secondbrain/)
+
+FastAPI prototype for a document-grounded AI assistant pattern intended to demonstrate the GCP / Vertex AI consulting shape: document ingestion, source attribution, external connectors, and later Agent Builder integration.
+
+#### Current implementation
+
+- PDF and plain-text ingestion with citation-shaped responses
+- Minimal agent scaffold with `init` and `query` endpoints
+- Initial Google Drive connector module for listing and downloading files
+- Local unit tests for ingest, agent scaffold, and Drive connector
+- Workspace-level CI runner support and saved test artifacts for multi-repo validation
+
+#### Next steps
+
+- Wire Drive access into the live app flow
+- Enable web grounding and Vertex AI-side agent configuration
+- Add Firestore-backed session state and external extension support
+
+#### Tech
+
+Python · FastAPI · `pypdf` · Google Drive API client · pytest · GitHub Actions · Docker
+
+---
+
 ## Repository layout
 
 ```
@@ -190,25 +223,97 @@ Portfolio/
 │   ├── opportunities-service/            #   ↳ sales pipeline
 │   ├── reporting-service/                #   ↳ aggregated reports
 │   ├── search-service/                   #   ↳ cross-domain search
-│   ├── standalones/
-│   │   ├── backend-service/              # task-api (Rust/Axum, Fly.io)
-│   │   ├── frontend-service/             # React 19 UI (GitHub Pages)
-│   │   ├── auth-service/                 # Python JWT service
-│   │   ├── ai-orchestrator-service/      # Python / Claude API
-│   │   └── event-stream-service/         # Go SSE hub (Fly.io)
-│   ├── terraform-soc2-baseline/          # Cloud-agnostic SOC 2 module
-│   │   ├── modules/gcp/                  #   GCP sub-module (8 .tf files)
-│   │   └── modules/aws/                  #   AWS sub-module (8 .tf files)
-│   ├── docs/cicd-template/               # CI/CD reference template docs
-│   │   └── scripts/                      #   health-check, rollback-gcp, rollback-aws
-│   └── .github/workflows/
-│       ├── rust.yml                      # Primary CI (test, audit, deploy)
-│       └── deploy-pipeline.yml           # Reference multi-env promotion template
+├── backend-service/                      # task-api (Rust/Axum, Fly.io)
+├── go-gateway/                           # Go API gateway (rate limiting, reverse proxy)
+├── projects-service/                     # Client portal data service (Rust/Axum, Fly.io)
+├── frontend-service/                     # React 19 UI + client portal (GitHub Pages)
+├── auth-service/                         # Python JWT service
+├── ai-orchestrator-service/              # Python / Claude API
+├── event-stream-service/                 # Go SSE hub (Fly.io)
+├── vertexai-secondbrain/                 # FastAPI document-ingest and agent prototype
+├── terraform-soc2-baseline/              # Cloud-agnostic SOC 2 module
+│   ├── modules/gcp/                      #   GCP sub-module (8 .tf files)
+│   └── modules/aws/                      #   AWS sub-module (8 .tf files)
+└── docs/cicd-template/                   # CI/CD reference docs
+    └── scripts/                          #   health-check, rollback-gcp, rollback-aws
+    └── .github/workflows/
+        ├── rust.yml                      # Primary CI (test, audit, deploy)
+        └── deploy-pipeline.yml           # Reference multi-env promotion template
+└── scripts/
+    └── run-checks.ps1                    # Full workspace test runner
 └── dynamodb_prototype/                   # DynamoDB medallion pipeline
     ├── src/bin/                          # Rust pipeline binaries + dashboard
     ├── go-pipeline-monitor/              # Go service (Fly.io)
     ├── docs/                             # Case study, OIDC setup guide
     └── template.yaml                     # AWS SAM / CloudFormation
+```
+
+## Running checks
+
+This workspace now uses two levels of test execution:
+
+- `run_workspace_tests.sh` at the repo root for cross-repo validation in CI and local bash environments
+- `microservices/scripts/run-checks.ps1` for deeper microservices-only verification on Windows
+
+### Option 1: run the workspace runner
+
+```bash
+cd d:/Projects/Portfolio
+bash ./run_workspace_tests.sh
+```
+
+### Option 2: run microservices checks from the microservices directory
+
+```powershell
+cd d:\Projects\Portfolio\microservices
+.\scripts\run-checks.ps1
+```
+
+## Submodule workflow
+
+This workspace uses git submodules for each service, where each subproject is an independently-versioned repository:
+
+- `microservices`
+- `dynamodb_prototype`
+- `ai-orchestrator-service`
+- `auth-service`
+- `backend-service`
+- `event-stream-service`
+- `frontend-service`
+- `go-gateway`
+- `observaboard`
+- `projects-service`
+
+### Common commands
+
+- Initialize after clone:
+  - `git submodule update --init --recursive`
+- Update all submodules to latest configured commits:
+  - `git submodule update --remote --recursive`
+- Inspect submodule status:
+  - `git submodule status --recursive`
+- Commit new submodule commit pointer:
+  - `cd <submodule>; git pull origin main; cd ..; git add <submodule>; git commit -m "Update <submodule> pointer"`
+
+**Note:** run `git clean -fdx` in submodule directories only if you want a full clean state and are okay losing uncommitted local changes.
+
+### Option 3: run per service or submodule
+
+You can also run `cargo test`, `cargo clippy`, `npm run build`, etc. in each service directory directly.
+
+### Recommended local verification (service-level)
+
+```powershell
+cd d:\Projects\Portfolio\microservices\reporting-service
+$env:AUTH_JWT_SECRET='dev-insecure-secret-change-me'
+cargo test
+
+cd ..\accounts-service
+$env:TEST_DATABASE_URL='sqlite::memory:'
+$env:AUTH_JWT_SECRET='dev-insecure-secret-change-me'
+cargo test
+
+# repeat for contacts-service, opportunities-service, activities-service, etc.
 ```
 
 ---
@@ -217,13 +322,21 @@ Portfolio/
 
 | App | Platform | URL |
 |-----|----------|-----|
-| frontend-service | GitHub Pages | https://rodmen07.github.io/frontend-service/ |
+| frontend-service | GitHub Pages | https://rodmen07.github.io/infraportal/ |
+| auth-service | GCP Cloud Run | https://auth-service-5gcrg4oiza-uc.a.run.app |
+| go-gateway | GCP Cloud Run | https://go-gateway-5gcrg4oiza-uc.a.run.app |
+| projects-service | GCP Cloud Run | https://projects-service-5gcrg4oiza-uc.a.run.app |
+| accounts-service | GCP Cloud Run | https://accounts-service-5gcrg4oiza-uc.a.run.app |
+| contacts-service | GCP Cloud Run | https://contacts-service-5gcrg4oiza-uc.a.run.app |
+| activities-service | GCP Cloud Run | https://activities-service-5gcrg4oiza-uc.a.run.app |
+| automation-service | GCP Cloud Run | https://automation-service-5gcrg4oiza-uc.a.run.app |
+| integrations-service | GCP Cloud Run | https://integrations-service-5gcrg4oiza-uc.a.run.app |
+| opportunities-service | GCP Cloud Run | https://opportunities-service-5gcrg4oiza-uc.a.run.app |
+| reporting-service | GCP Cloud Run | https://reporting-service-5gcrg4oiza-uc.a.run.app |
+| search-service | GCP Cloud Run | https://search-service-5gcrg4oiza-uc.a.run.app |
 | task-api-service | Fly.io | https://backend-service-rodmen07-v2.fly.dev |
-| accounts-service | Fly.io | https://accounts-service.fly.dev |
-| contacts-service | Fly.io | https://contacts-service.fly.dev |
 | ai-orchestrator | Fly.io | https://ai-orchestrator-service-rodmen07.fly.dev |
 | dashboard (Rust) | Fly.io | https://dynamodb-dashboard-rodmen07.fly.dev |
-| go-pipeline-monitor | Fly.io | https://go-pipeline-monitor-rodmen07.fly.dev |
 | observaboard | Fly.io | https://observaboard-rodmen07.fly.dev |
 | event-stream-service | Fly.io | https://event-stream-service.fly.dev |
 
@@ -240,15 +353,30 @@ Portfolio/
 | v0.4.3 | Go Service | ✅ Published |
 | v0.4.4 | Frontend UI Expansion — CRM CRUD, Live Feed, Search, Reports, Observaboard pages | ✅ Published |
 
-### v0.5 — Platform Completeness *(Planned)*
+### v0.5 — Platform Completeness ✅ Complete
 
 | Sub-version | Feature | Status |
 |-------------|---------|--------|
-| v0.5.1 | reporting-service production upgrade (SQLite, JWT auth, saved report CRUD, /dashboard) | 🔲 Planned |
-| v0.5.2 | search-service production upgrade (cross-domain fan-out search) | 🔲 Planned |
+| v0.5.1 | reporting-service production upgrade (SQLite, JWT auth, saved report CRUD, /dashboard) | ✅ Published |
+| v0.5.2 | search-service production upgrade (cross-domain fan-out search, write-through indexing) | ✅ Published |
+| v0.5.3 | activities-service production upgrade (SQLite, JWT auth, CRUD) | ✅ Published |
+| v0.5.4 | automation-service production upgrade (SQLite, JWT auth, workflow rules) | ✅ Published |
+| v0.5.5 | integrations-service production upgrade (SQLite, JWT auth, connection registry) | ✅ Published |
+| v0.5.6 | opportunities-service production upgrade (SQLite, JWT auth, stage tracking) | ✅ Published |
 
 **Completion states:** Planned → Implemented → Published. Published means all release locations updated (see [CLAUDE.md](./microservices/CLAUDE.md) § Release Locations).
 
+### v1.0 — Client Portal ✅ Complete
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.0.1 | `projects-service` — Rust/Axum client portal API (projects, milestones, deliverables) | ✅ Published |
+| v1.0.2 | `go-gateway` — Go API gateway deployed to GCP Cloud Run | ✅ Published |
+| v1.0.3 | GCP Cloud Run migration — 11 services (OIDC + WIF, Artifact Registry, Secret Manager) | ✅ Published |
+| v1.0.4 | OAuth flows — GitHub + Google client portal sign-in with client-role JWT | ✅ Published |
+| v1.0.5 | Admin provisioning UI — create projects, milestones, deliverables; assign to client users | ✅ Published |
+
 ### Backlog
 
-- Client-facing project dashboard (longer-term)
+- Cross-service integration features (activities linking to real accounts/contacts)
+- Persistent storage for Cloud Run services (Cloud SQL or mounted volumes)
