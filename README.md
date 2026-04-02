@@ -6,6 +6,12 @@ Production-grade cloud engineering projects demonstrating Rust, Python, TypeScri
 
 **Live site:** https://rodmen07.github.io/infraportal/
 
+## Session Handoff
+
+For the latest merged implementation and exact next steps, start with:
+
+- `docs/session-handoff-2026-04-01.md`
+
 ---
 
 ## Projects
@@ -180,6 +186,30 @@ Rust async (Tokio) · `aws-sdk-dynamodb` · Axum 0.8 · Go 1.22 · AWS SDK for G
 
 ---
 
+### 4. [Vertex AI Second Brain Prototype](./vertexai-secondbrain/)
+
+FastAPI prototype for a document-grounded AI assistant pattern intended to demonstrate the GCP / Vertex AI consulting shape: document ingestion, source attribution, external connectors, and later Agent Builder integration.
+
+#### Current implementation
+
+- PDF and plain-text ingestion with citation-shaped responses
+- Minimal agent scaffold with `init` and `query` endpoints
+- Initial Google Drive connector module for listing and downloading files
+- Local unit tests for ingest, agent scaffold, and Drive connector
+- Workspace-level CI runner support and saved test artifacts for multi-repo validation
+
+#### Next steps
+
+- Wire Drive access into the live app flow
+- Enable web grounding and Vertex AI-side agent configuration
+- Add Firestore-backed session state and external extension support
+
+#### Tech
+
+Python · FastAPI · `pypdf` · Google Drive API client · pytest · GitHub Actions · Docker
+
+---
+
 ## Repository layout
 
 ```
@@ -206,6 +236,7 @@ Portfolio/
 ├── auth-service/                         # Python JWT service
 ├── ai-orchestrator-service/              # Python / Claude API
 ├── event-stream-service/                 # Go SSE hub (Fly.io)
+├── vertexai-secondbrain/                 # FastAPI document-ingest and agent prototype
 ├── terraform-soc2-baseline/              # Cloud-agnostic SOC 2 module
 │   ├── modules/gcp/                      #   GCP sub-module (8 .tf files)
 │   └── modules/aws/                      #   AWS sub-module (8 .tf files)
@@ -225,9 +256,24 @@ Portfolio/
 
 ## Running checks
 
-This repository uses a centralized test runner in `microservices/scripts/run-checks.ps1`.
+This workspace now uses two levels of test execution:
 
-### Option 1: run from microservices directory
+- `run_workspace_tests.sh` at the repo root for cross-repo validation in CI and local bash environments
+- `microservices/scripts/run-checks.ps1` for deeper microservices-only verification on Windows
+
+### Option 1: run the workspace runner
+
+```bash
+cd d:/Projects/Portfolio
+bash ./run_workspace_tests.sh
+```
+
+### Option 2: run microservices checks from the microservices directory
+
+```powershell
+cd d:\Projects\Portfolio\microservices
+.\scripts\run-checks.ps1
+```
 
 ## Submodule workflow
 
@@ -257,33 +303,9 @@ This workspace uses git submodules for each service, where each subproject is an
 
 **Note:** run `git clean -fdx` in submodule directories only if you want a full clean state and are okay losing uncommitted local changes.
 
-### Running the workspace runner
-
-- `powershell -NoProfile -Command "Set-Location 'd:\Projects\Portfolio\microservices'; .\scripts\run-checks.ps1"`
-- To skip specific sectors: `.
-un-checks.ps1 -SkipRust -SkipPython -SkipFrontend`
-
-### 2. Option 2: run per submodule
+### Option 3: run per service or submodule
 
 You can also run `cargo test`, `cargo clippy`, `npm run build`, etc. in each service directory directly.
-
-### 3. Option 3: run cluster tests
-
-Then continue with your existing docs.
-
-### Option 1: run from microservices directory
-
-```powershell
-cd d:\Projects\Portfolio\microservices
-.\scripts\run-checks.ps1
-```
-
-### Option 2: run from repo root (convenience wrapper)
-
-```powershell
-cd d:\Projects\Portfolio
-.\run-checks.ps1
-```
 
 ### Recommended local verification (service-level)
 
