@@ -1,0 +1,23 @@
+# CI artifacts
+artifacts/ci-run-*/
+artifacts/ci-runner-image/
+artifacts/ci-runs/
+test_logs/
+runs.json
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db

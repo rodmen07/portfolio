@@ -16,8 +16,8 @@
 [submodule "event-stream-service"]
 	path = event-stream-service
 	url = https://github.com/rodmen07/event-stream-service.git
-[submodule "frontend-service"]
-	path = frontend-service
+[submodule "infraportal"]
+	path = infraportal
 	url = https://github.com/rodmen07/infraportal.git
 [submodule "observaboard"]
 	path = observaboard
