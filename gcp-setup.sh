@@ -16,15 +16,43 @@
 
 set -euo pipefail
 
+# Allow non-interactive runs driven by environment variables.
+# Provide: GCP_PROJECT_ID, GCP_REGION, NONINTERACTIVE=1, JWT_SECRET, and other secret envs.
 GITHUB_OWNER="rodmen07"
 SA_NAME="github-deployer"
 POOL_ID="github-pool"
 PROVIDER_ID="github-provider"
 REGISTRY="microservices"
 
+# Populate PROJECT_ID/REGION from env if set (use GCP_PROJECT_ID/GCP_REGION as canonical names)
+if [ -n "${GCP_PROJECT_ID:-}" ]; then
+  PROJECT_ID="${GCP_PROJECT_ID}"
+fi
+if [ -n "${GCP_REGION:-}" ]; then
+  REGION="${GCP_REGION}"
+fi
+
+# NONINTERACTIVE=1 will avoid interactive prompts and require required envs be set.
+NONINTERACTIVE=${NONINTERACTIVE:-0}
+
 # ── Prompts ───────────────────────────────────────────────────────────────────
-read -rp "GCP Project ID (new or existing): " PROJECT_ID
-read -rp "GCP Region [us-central1]: " REGION
+if [ -z "${PROJECT_ID:-}" ]; then
+  if [ "${NONINTERACTIVE}" = "1" ]; then
+    echo "ERROR: NONINTERACTIVE set but GCP_PROJECT_ID/PROJECT_ID not provided. Exiting."
+    exit 1
+  fi
+  read -rp "GCP Project ID (new or existing): " PROJECT_ID
+fi
+
+if [ -z "${REGION:-}" ]; then
+  if [ -n "${GCP_REGION:-}" ]; then
+    REGION="${GCP_REGION}"
+  elif [ "${NONINTERACTIVE}" = "1" ]; then
+    REGION="us-central1"
+  else
+    read -rp "GCP Region [us-central1]: " REGION
+  fi
+fi
 REGION="${REGION:-us-central1}"
 
 SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
@@ -42,7 +70,11 @@ fi
 echo ""
 echo "⚠  Ensure billing is enabled before continuing:"
 echo "   https://console.cloud.google.com/billing/linkedaccount?project=${PROJECT_ID}"
-read -rp "   Press Enter once billing is enabled..."
+if [ "${NONINTERACTIVE}" != "1" ]; then
+  read -rp "   Press Enter once billing is enabled..."
+else
+  echo "   NONINTERACTIVE=1 — skipping billing prompt"
+fi
 
 # ── Enable APIs ───────────────────────────────────────────────────────────────
 echo ""
@@ -129,24 +161,43 @@ create_or_update_secret() {
   fi
 }
 
-read -rsp "AUTH_JWT_SECRET: " JWT_SECRET; echo ""
-[ -n "${JWT_SECRET}" ] && create_or_update_secret "AUTH_JWT_SECRET" "${JWT_SECRET}"
+if [ -n "${JWT_SECRET:-}" ]; then
+  create_or_update_secret "AUTH_JWT_SECRET" "${JWT_SECRET}"
+elif [ "${NONINTERACTIVE}" != "1" ]; then
+  read -rsp "AUTH_JWT_SECRET: " JWT_SECRET; echo ""
+  [ -n "${JWT_SECRET}" ] && create_or_update_secret "AUTH_JWT_SECRET" "${JWT_SECRET}"
+else
+  echo "Skipping AUTH_JWT_SECRET (not provided)"
+fi
 
 echo ""
 echo "--- User OAuth (GitHub login) ---"
 for NAME in USER_GITHUB_CLIENT_ID USER_GITHUB_CLIENT_SECRET USER_GITHUB_REDIRECT_URI \
             USER_GOOGLE_CLIENT_ID USER_GOOGLE_CLIENT_SECRET USER_GOOGLE_REDIRECT_URI \
             USER_OAUTH_STATE_SECRET; do
-  read -rsp "${NAME}: " VAL; echo ""
-  [ -n "${VAL}" ] && create_or_update_secret "${NAME}" "${VAL}"
+  # If env var with same name is present, use it. Otherwise prompt (unless non-interactive).
+  if [ -n "${!NAME:-}" ]; then
+    create_or_update_secret "${NAME}" "${!NAME}"
+  elif [ "${NONINTERACTIVE}" = "1" ]; then
+    echo "Skipping ${NAME} (not provided)"
+  else
+    read -rsp "${NAME}: " VAL; echo ""
+    [ -n "${VAL}" ] && create_or_update_secret "${NAME}" "${VAL}"
+  fi
 done
 
 echo ""
 echo "--- CMS OAuth (GitHub Pages CMS) ---"
 for NAME in CMS_GITHUB_CLIENT_ID CMS_GITHUB_CLIENT_SECRET CMS_GITHUB_REDIRECT_URI \
             CMS_OAUTH_STATE_SECRET; do
-  read -rsp "${NAME}: " VAL; echo ""
-  [ -n "${VAL}" ] && create_or_update_secret "${NAME}" "${VAL}"
+  if [ -n "${!NAME:-}" ]; then
+    create_or_update_secret "${NAME}" "${!NAME}"
+  elif [ "${NONINTERACTIVE}" = "1" ]; then
+    echo "Skipping ${NAME} (not provided)"
+  else
+    read -rsp "${NAME}: " VAL; echo ""
+    [ -n "${VAL}" ] && create_or_update_secret "${NAME}" "${VAL}"
+  fi
 done
 
 # ── Output ────────────────────────────────────────────────────────────────────

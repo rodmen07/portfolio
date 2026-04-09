@@ -69,14 +69,27 @@ for cwd in "${PROJECT_DIRS[@]}"; do
   name=$(echo "$rel" | sed 's/[\/ ]/_/g')
   if [ -f "$cwd/requirements.txt" ]; then
     echo "Processing Python project: $rel"
-    python -m venv "$cwd/.venv"
-    . "$cwd/.venv/bin/activate"
+    # Create venv if missing (best-effort)
+    if [ ! -d "$cwd/.venv" ]; then
+      python -m venv "$cwd/.venv" || python -m venv --copies "$cwd/.venv" || true
+    fi
+    # Activate venv (Unix or Windows)
+    if [ -f "$cwd/.venv/bin/activate" ]; then
+      . "$cwd/.venv/bin/activate"
+    elif [ -f "$cwd/.venv/Scripts/activate" ]; then
+      . "$cwd/.venv/Scripts/activate"
+    else
+      echo "No venv activate script found for $cwd; skipping python setup"
+      continue
+    fi
     pip install --upgrade pip setuptools wheel || true
     pip install -r "$cwd/requirements.txt" || true
     if [ -d "$cwd/tests" ]; then
       run_and_capture "${name}-pytest" "pytest -q --maxfail=1 || true" "$cwd" || true
     fi
-    deactivate || true
+    if command -v deactivate >/dev/null 2>&1; then
+      deactivate || true
+    fi
   elif [ -f "$cwd/go.mod" ]; then
     echo "Processing Go project: $rel"
     run_and_capture "${name}-gotest" "go test ./... || true" "$cwd" || true
