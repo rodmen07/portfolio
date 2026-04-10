@@ -1,8 +1,0 @@
-Request to update `vertexai-secondbrain` submodule
-
-Target commit: 9f00c85895fee427ac60c39c3982e6d8e8189d31
-Submodule PR: https://github.com/rodmen07/vertexai-secondbrain/pull/3
-
-This branch contains only a small marker file to propose updating the
-submodule pointer in the parent repository. To accept, merge the PR and
-optionally remove this marker file.

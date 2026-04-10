@@ -186,30 +186,6 @@ Rust async (Tokio) · `aws-sdk-dynamodb` · Axum 0.8 · Go 1.22 · AWS SDK for G
 
 ---
 
-### 4. [Vertex AI Second Brain Prototype](./vertexai-secondbrain/)
-
-FastAPI prototype for a document-grounded AI assistant pattern intended to demonstrate the GCP / Vertex AI consulting shape: document ingestion, source attribution, external connectors, and later Agent Builder integration.
-
-#### Current implementation
-
-- PDF and plain-text ingestion with citation-shaped responses
-- Minimal agent scaffold with `init` and `query` endpoints
-- Initial Google Drive connector module for listing and downloading files
-- Local unit tests for ingest, agent scaffold, and Drive connector
-- Workspace-level CI runner support and saved test artifacts for multi-repo validation
-
-#### Next steps
-
-- Wire Drive access into the live app flow
-- Enable web grounding and Vertex AI-side agent configuration
-- Add Firestore-backed session state and external extension support
-
-#### Tech
-
-Python · FastAPI · `pypdf` · Google Drive API client · pytest · GitHub Actions · Docker
-
----
-
 ## Repository layout
 
 ```
@@ -236,7 +212,6 @@ Portfolio/
 ├── auth-service/                         # Python JWT service
 ├── ai-orchestrator-service/              # Python / Claude API
 ├── event-stream-service/                 # Go SSE hub (Fly.io)
-├── vertexai-secondbrain/                 # FastAPI document-ingest and agent prototype
 ├── terraform-soc2-baseline/              # Cloud-agnostic SOC 2 module
 │   ├── modules/gcp/                      #   GCP sub-module (8 .tf files)
 │   └── modules/aws/                      #   AWS sub-module (8 .tf files)
