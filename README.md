@@ -351,7 +351,16 @@ cargo test
 | v1.0.4 | OAuth flows — GitHub + Google client portal sign-in with client-role JWT | ✅ Published |
 | v1.0.5 | Admin provisioning UI — create projects, milestones, deliverables; assign to client users | ✅ Published |
 
+### v1.1 — Developer Experience & Portfolio Quality ✅ Complete
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.1 | CI/CD pipeline — two-stage runner image build/test across full workspace | ✅ Published |
+| v1.1.1 | Gemini API integration — `/consult/gemini` + `/consult/gemini/stream` endpoints; Claude/Gemini toggle in frontend | ✅ Published |
+| v1.1.2 | Portfolio narrative fixes — all Dockerfiles cleaned of SQLite deps; all docs corrected to PostgreSQL (Cloud SQL) | ✅ Published |
+| v1.1.3 | activities-service cross-service validation — account_id and contact_id validated on create (matches contacts-service pattern) | ✅ Published |
+
 ### Backlog
 
-- Cross-service integration features (activities linking to real accounts/contacts)
-- Persistent storage for Cloud Run services (Cloud SQL or mounted volumes)
+- Provision Cloud SQL (`terraform apply` in `microservices/terraform/`) and set cross-service URL vars in `terraform.tfvars`
+- Gemini endpoint live validation (pending free-tier quota activation on `gen-lang-client-0837752476`)
