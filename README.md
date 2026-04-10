@@ -6,12 +6,6 @@ Production-grade cloud engineering projects demonstrating Rust, Python, TypeScri
 
 **Live site:** https://rodmen07.github.io/infraportal/
 
-## Session Handoff
-
-For the latest merged implementation and exact next steps, start with:
-
-- `docs/session-handoff-2026-04-01.md`
-
 ---
 
 ## Projects
