@@ -12,7 +12,7 @@ Production-grade cloud engineering projects demonstrating Rust, Python, TypeScri
 
 ### 1. [InfraPortal — Microservices Platform](./microservices/)
 
-9-service CRM platform with SQLite persistence, JWT authentication, and AI integration. All 11 backend services deployed on GCP Cloud Run (scale-to-zero, us-central1) with GitHub Actions OIDC CI/CD. Includes a client portal with GitHub + Google OAuth and an admin provisioning UI.
+9-service CRM platform with PostgreSQL (Cloud SQL) persistence, JWT authentication, and AI integration. All 11 backend services deployed on GCP Cloud Run (scale-to-zero, us-central1) with GitHub Actions OIDC CI/CD. Includes a client portal with GitHub + Google OAuth and an admin provisioning UI.
 
 #### Services
 
@@ -43,7 +43,7 @@ Production-grade cloud engineering projects demonstrating Rust, Python, TypeScri
         │
   Rust/Axum task-api  ──  Python AI Orchestrator (Claude API)
         │
-  Domain microservices (Rust/Axum, PostgreSQL/SQLite)
+  Domain microservices (Rust/Axum, PostgreSQL via Cloud SQL)
   accounts · contacts · activities · automation
   integrations · opportunities · reporting · search
 
@@ -193,7 +193,7 @@ Portfolio/
 ├── microservices/                        # InfraPortal platform
 │   ├── accounts-service/                 # Rust/Axum, PostgreSQL
 │   ├── contacts-service/                 #   ↳ cross-service account validation
-│   ├── activities-service/               # Rust/Axum, SQLite
+│   ├── activities-service/               # Rust/Axum, PostgreSQL
 │   ├── automation-service/               #   ↳ workflow rules
 │   ├── integrations-service/             #   ↳ third-party hooks
 │   ├── opportunities-service/            #   ↳ sales pipeline
@@ -332,12 +332,12 @@ cargo test
 
 | Sub-version | Feature | Status |
 |-------------|---------|--------|
-| v0.5.1 | reporting-service production upgrade (SQLite, JWT auth, saved report CRUD, /dashboard) | ✅ Published |
+| v0.5.1 | reporting-service production upgrade (PostgreSQL, JWT auth, saved report CRUD, /dashboard) | ✅ Published |
 | v0.5.2 | search-service production upgrade (cross-domain fan-out search, write-through indexing) | ✅ Published |
-| v0.5.3 | activities-service production upgrade (SQLite, JWT auth, CRUD) | ✅ Published |
-| v0.5.4 | automation-service production upgrade (SQLite, JWT auth, workflow rules) | ✅ Published |
-| v0.5.5 | integrations-service production upgrade (SQLite, JWT auth, connection registry) | ✅ Published |
-| v0.5.6 | opportunities-service production upgrade (SQLite, JWT auth, stage tracking) | ✅ Published |
+| v0.5.3 | activities-service production upgrade (PostgreSQL, JWT auth, CRUD) | ✅ Published |
+| v0.5.4 | automation-service production upgrade (PostgreSQL, JWT auth, workflow rules) | ✅ Published |
+| v0.5.5 | integrations-service production upgrade (PostgreSQL, JWT auth, connection registry) | ✅ Published |
+| v0.5.6 | opportunities-service production upgrade (PostgreSQL, JWT auth, stage tracking) | ✅ Published |
 
 **Completion states:** Planned → Implemented → Published. Published means all release locations updated (see [CLAUDE.md](./microservices/CLAUDE.md) § Release Locations).
 
