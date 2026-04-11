@@ -362,5 +362,4 @@ cargo test
 
 ### Backlog
 
-- Provision Cloud SQL (`terraform apply` in `microservices/terraform/`) and set cross-service URL vars in `terraform.tfvars`
 - Gemini endpoint live validation (pending free-tier quota activation on `gen-lang-client-0837752476`)
