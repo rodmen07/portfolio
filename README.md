@@ -360,6 +360,11 @@ cargo test
 | v1.1.2 | Portfolio narrative fixes — all Dockerfiles cleaned of SQLite deps; all docs corrected to PostgreSQL (Cloud SQL) | ✅ Published |
 | v1.1.3 | activities-service cross-service validation — account_id and contact_id validated on create (matches contacts-service pattern) | ✅ Published |
 
-### Backlog
+### v1.2 — Operational Maturity
 
-- Gemini endpoint live validation (pending free-tier quota activation on `gen-lang-client-0837752476`)
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.2.1 | Data export pipeline — bulk CSV/JSON export from reporting-service; admin export modal | Planned |
+| v1.2.2 | Audit trail & compliance — new `audit-service` (Rust/Axum), immutable CRM mutation log, admin audit page | Planned |
+| v1.2.3 | Portfolio observability — CRM services emit events to Observaboard; admin service health dashboard | Planned |
+| v1.2.4 | Service resilience & testing — E2E portal test suite, load testing tooling, chaos engineering runbook | Planned |
