@@ -1,0 +1,129 @@
+name: Productionizer Agent
+
+# Runs daily at 06:00 UTC. One service + one gap per run.
+# Can also be triggered manually with optional service/gap overrides.
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      force_service:
+        description: "Service to target (e.g. accounts-service). Leave blank for auto-select."
+        required: false
+        default: ""
+      force_gap:
+        description: "Gap to fix (structured-logging | dynamic-health | error-details | audit-error-handling | error-path-tests). Leave blank for auto-select."
+        required: false
+        default: ""
+
+concurrency:
+  group: productionizer
+  cancel-in-progress: false
+
+jobs:
+  productionize:
+    name: Productionize one service
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      CARGO_TERM_COLOR: always
+
+    steps:
+      # ── Checkout ────────────────────────────────────────────────────────────
+
+      - name: Checkout portfolio repo
+        uses: actions/checkout@v4
+        with:
+          # Don't auto-init submodules — we configure credentials first
+          submodules: false
+
+      - name: Configure git identity and credentials
+        run: |
+          git config --global user.name  "productionizer-bot"
+          git config --global user.email "productionizer@users.noreply.github.com"
+          # Rewrite HTTPS URLs for the microservices repo to include the PAT,
+          # so git push works without an interactive prompt.
+          git config --global \
+            url."https://x-access-token:${{ secrets.MICROSERVICES_PAT }}@github.com/rodmen07/microservices".insteadOf \
+            "https://github.com/rodmen07/microservices"
+
+      - name: Init microservices submodule
+        run: git submodule update --init microservices
+
+      # ── Toolchains ──────────────────────────────────────────────────────────
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Rust toolchain (stable + clippy)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "microservices -> target"
+
+      - name: Install agent Python dependencies
+        run: pip install google-generativeai>=0.8.0
+
+      # ── State ───────────────────────────────────────────────────────────────
+
+      - name: Restore agent state from cache
+        uses: actions/cache/restore@v4
+        with:
+          path: agents/productionizer/state.json
+          key: productionizer-state-v1
+
+      # ── Database setup ──────────────────────────────────────────────────────
+
+      - name: Create per-service test databases
+        env:
+          PGPASSWORD: postgres
+        run: |
+          for db in accounts contacts activities workflows connections opportunities reports documents spend projects audit; do
+            psql -h localhost -U postgres -c "CREATE DATABASE ${db};" || true
+          done
+
+      # ── Run agent ───────────────────────────────────────────────────────────
+
+      - name: Run productionizer agent
+        env:
+          GOOGLE_API_KEY:    ${{ secrets.GOOGLE_API_KEY }}
+          GH_TOKEN:          ${{ secrets.MICROSERVICES_PAT }}
+          FORCE_SERVICE:     ${{ inputs.force_service }}
+          FORCE_GAP:         ${{ inputs.force_gap }}
+          ALLOWED_ORIGINS:   "http://localhost:5173"
+          AUTH_JWT_SECRET:   "dev-insecure-secret-change-me"
+        run: |
+          cd agents/productionizer
+          python main.py
+
+      # ── State persistence ───────────────────────────────────────────────────
+
+      - name: Save updated agent state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: agents/productionizer/state.json
+          key: productionizer-state-v1
