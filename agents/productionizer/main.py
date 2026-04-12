@@ -97,7 +97,9 @@ def branch_name(service: str, gap: str) -> str:
 def create_branch(branch: str) -> None:
     log.info("Fetching origin/main in microservices submodule")
     git("fetch", "origin", "main")
-    git("checkout", "-b", branch, "origin/main")
+    # -B creates the branch if new, or resets it to origin/main if it already
+    # exists locally (e.g. left over from a previous failed clippy run).
+    git("checkout", "-B", branch, "origin/main")
     log.info("Created branch: %s", branch)
 
 
