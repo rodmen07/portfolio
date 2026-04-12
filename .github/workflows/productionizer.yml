@@ -1,6 +1,6 @@
 name: Productionizer Agent
 
-# Runs daily at 06:00 UTC. One service + one gap per run.
+# Runs daily at 06:00 UTC. Loops through ALL remaining tasks in one run.
 # Can also be triggered manually with optional service/gap overrides.
 
 on:
@@ -23,9 +23,9 @@ concurrency:
 
 jobs:
   productionize:
-    name: Productionize one service
+    name: Productionize all remaining tasks
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 360
 
     services:
       postgres:
@@ -51,26 +51,15 @@ jobs:
       - name: Checkout portfolio repo
         uses: actions/checkout@v4
         with:
-          # Don't auto-init submodules — we configure credentials first
           submodules: false
 
-      - name: Configure git identity and credentials
+      - name: Configure git identity
         run: |
           git config --global user.name  "productionizer-bot"
           git config --global user.email "productionizer@users.noreply.github.com"
-          # Rewrite HTTPS URLs for the microservices repo to include the PAT,
-          # so git push works without an interactive prompt.
-          git config --global \
-            url."https://x-access-token:${{ secrets.MICROSERVICES_PAT }}@github.com/rodmen07/microservices".insteadOf \
-            "https://github.com/rodmen07/microservices"
 
       - name: Init microservices submodule
         run: git submodule update --init microservices
-
-      - name: Set microservices remote URL for push
-        run: |
-          git -C microservices remote set-url origin \
-            https://x-access-token:${{ secrets.MICROSERVICES_PAT }}@github.com/rodmen07/microservices.git
 
       # ── Toolchains ──────────────────────────────────────────────────────────
 
@@ -110,55 +99,76 @@ jobs:
             psql -h localhost -U postgres -c "CREATE DATABASE ${db};" || true
           done
 
-      # ── Run agent ───────────────────────────────────────────────────────────
+      # ── Main loop ───────────────────────────────────────────────────────────
+      # Python exit codes:
+      #   0 = task committed; output file written; push + PR needed
+      #   1 = unrecoverable error; stop
+      #   2 = task skipped (no changes needed); continue to next task
+      #   3 = all tasks complete; stop
 
-      - name: Run productionizer agent
+      - name: Run productionizer loop
         env:
-          GOOGLE_API_KEY:    ${{ secrets.GOOGLE_API_KEY }}
-          GH_TOKEN:          ${{ secrets.MICROSERVICES_PAT }}
-          FORCE_SERVICE:     ${{ inputs.force_service }}
-          FORCE_GAP:         ${{ inputs.force_gap }}
-          ALLOWED_ORIGINS:   "http://localhost:5173"
-          AUTH_JWT_SECRET:   "dev-insecure-secret-change-me"
-        run: |
-          cd agents/productionizer
-          python main.py
-
-      # ── Push branch + open PR ────────────────────────────────────────────────
-      # Runs in shell where MICROSERVICES_PAT is a plain env var.
-      # GIT_CONFIG_GLOBAL=/dev/null bypasses the GITHUB_TOKEN extraheader that
-      # actions/checkout injects globally — so only the PAT URL credential is used.
-
-      - name: Push branch and open PR
-        env:
-          GH_TOKEN: ${{ secrets.MICROSERVICES_PAT }}
+          GOOGLE_API_KEY:  ${{ secrets.GOOGLE_API_KEY }}
+          GH_TOKEN:        ${{ secrets.MICROSERVICES_PAT }}
+          FORCE_SERVICE:   ${{ inputs.force_service }}
+          FORCE_GAP:       ${{ inputs.force_gap }}
+          ALLOWED_ORIGINS: "http://localhost:5173"
+          AUTH_JWT_SECRET: "dev-insecure-secret-change-me"
         run: |
           OUTPUT=agents/productionizer/.productionizer-output.json
-          if [ ! -f "$OUTPUT" ]; then
-            echo "No output file — agent did not produce a commit. Skipping push."
-            exit 0
-          fi
 
-          BRANCH=$(jq -r '.branch'    "$OUTPUT")
-          TITLE=$(jq  -r '.pr_title'  "$OUTPUT")
-          BODY=$(jq   -r '.pr_body'   "$OUTPUT")
-
-          echo "Verifying PAT can reach microservices repo..."
+          # Verify PAT can reach microservices repo before starting the loop
           gh repo view rodmen07/microservices --json name,visibility || \
-            { echo "ERROR: MICROSERVICES_PAT cannot access rodmen07/microservices — check token scopes"; exit 1; }
+            { echo "ERROR: MICROSERVICES_PAT cannot access rodmen07/microservices"; exit 1; }
 
-          echo "Pushing branch: $BRANCH"
-          GIT_CONFIG_GLOBAL=/dev/null git -C microservices push \
-            "https://x-access-token:${GH_TOKEN}@github.com/rodmen07/microservices.git" \
-            "${BRANCH}:${BRANCH}"
+          while true; do
+            cd "$GITHUB_WORKSPACE/agents/productionizer"
+            python main.py
+            EXIT_CODE=$?
 
-          echo "Opening PR..."
-          gh pr create \
-            --repo rodmen07/microservices \
-            --base main \
-            --head "$BRANCH" \
-            --title "$TITLE" \
-            --body "$BODY"
+            if [ $EXIT_CODE -eq 1 ]; then
+              echo "Agent reported an error. Stopping."
+              exit 1
+            fi
+
+            if [ $EXIT_CODE -eq 3 ]; then
+              echo "All tasks complete!"
+              break
+            fi
+
+            if [ $EXIT_CODE -eq 2 ]; then
+              echo "Task skipped — continuing to next task."
+              rm -f "$GITHUB_WORKSPACE/$OUTPUT"
+              continue
+            fi
+
+            # EXIT_CODE 0: task committed — push branch and open PR
+            cd "$GITHUB_WORKSPACE"
+            if [ ! -f "$OUTPUT" ]; then
+              echo "WARNING: exit 0 but no output file. Continuing."
+              continue
+            fi
+
+            BRANCH=$(jq -r '.branch'   "$OUTPUT")
+            TITLE=$(jq  -r '.pr_title' "$OUTPUT")
+            BODY=$(jq   -r '.pr_body'  "$OUTPUT")
+
+            echo "Pushing branch: $BRANCH"
+            GIT_CONFIG_GLOBAL=/dev/null git -C microservices push \
+              "https://x-access-token:${GH_TOKEN}@github.com/rodmen07/microservices.git" \
+              "${BRANCH}:${BRANCH}"
+
+            echo "Opening PR..."
+            gh pr create \
+              --repo rodmen07/microservices \
+              --base main \
+              --head "$BRANCH" \
+              --title "$TITLE" \
+              --body "$BODY"
+
+            rm -f "$OUTPUT"
+            echo "Task done. Moving to next."
+          done
 
       # ── State persistence ───────────────────────────────────────────────────
 

@@ -52,6 +52,12 @@ STATE_FILE  = pathlib.Path(__file__).parent / "state.json"
 OUTPUT_FILE = pathlib.Path(__file__).parent / ".productionizer-output.json"
 MAX_TOOL_ROUNDS = 25  # safety cap on agent loop iterations
 
+# Exit codes — read by the workflow loop to decide what to do next.
+EXIT_COMMITTED = 0   # task committed; output file written; push + PR needed
+EXIT_ERROR     = 1   # unrecoverable error; stop the loop
+EXIT_SKIP      = 2   # task skipped (no changes needed); continue to next task
+EXIT_DONE      = 3   # all tasks complete; stop the loop
+
 
 # ---------------------------------------------------------------------------
 # State management
@@ -276,7 +282,7 @@ def main() -> None:
         task = pick_next_task(state)
         if task is None:
             log.info("All %d tasks are complete. Nothing to do.", len(build_task_queue()))
-            sys.exit(0)
+            sys.exit(EXIT_DONE)
         service, gap = task
         log.info("Selected next task: %s / %s", service, gap)
 
@@ -286,7 +292,7 @@ def main() -> None:
     existing = git("ls-remote", "--heads", "origin", branch, check=False)
     if existing.stdout.strip():
         log.warning("Branch %s already exists on remote — skipping (may be an open PR)", branch)
-        sys.exit(0)
+        sys.exit(EXIT_SKIP)
 
     create_branch(branch)
 
@@ -300,14 +306,20 @@ def main() -> None:
         files_changed = bool(status.stdout.strip())
 
         if not files_changed:
-            log.info("Agent made no file changes (task may already be complete). Exiting cleanly.")
-            sys.exit(0)
+            log.info("Agent made no file changes — marking task done and continuing.")
+            state.setdefault("completed", []).append([service, gap])
+            state["last_run"] = datetime.datetime.utcnow().isoformat() + "Z"
+            save_state(state)
+            sys.exit(EXIT_SKIP)
 
         # Model may signal explicitly that the gap is already satisfied
         if summary and summary.upper().startswith("SKIP:"):
             log.info("Agent reported task already satisfied: %s", summary)
             revert_changes(service)
-            sys.exit(0)
+            state.setdefault("completed", []).append([service, gap])
+            state["last_run"] = datetime.datetime.utcnow().isoformat() + "Z"
+            save_state(state)
+            sys.exit(EXIT_SKIP)
 
         # Files were changed — ensure we have a summary (use fallback if model
         # produced no text, which can happen with gemini-2.5-flash thinking mode).
