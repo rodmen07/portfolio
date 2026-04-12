@@ -115,11 +115,15 @@ jobs:
           ALLOWED_ORIGINS: "http://localhost:5173"
           AUTH_JWT_SECRET: "dev-insecure-secret-change-me"
         run: |
+          set +e  # exit codes are handled manually; don't let bash -e kill the loop
           OUTPUT=agents/productionizer/.productionizer-output.json
 
           # Verify PAT can reach microservices repo before starting the loop
-          gh repo view rodmen07/microservices --json name,visibility || \
-            { echo "ERROR: MICROSERVICES_PAT cannot access rodmen07/microservices"; exit 1; }
+          gh repo view rodmen07/microservices --json name,visibility
+          if [ $? -ne 0 ]; then
+            echo "ERROR: MICROSERVICES_PAT cannot access rodmen07/microservices"
+            exit 1
+          fi
 
           while true; do
             cd "$GITHUB_WORKSPACE/agents/productionizer"
