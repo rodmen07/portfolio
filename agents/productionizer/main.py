@@ -19,6 +19,7 @@ Optional overrides (for workflow_dispatch manual triggers):
 
 from __future__ import annotations
 
+import base64
 import datetime
 import json
 import logging
@@ -107,12 +108,15 @@ def commit_changes(service: str, gap: str) -> None:
 
 
 def push_branch(branch: str) -> None:
-    # Embed the PAT directly in the remote URL so the Actions credential helper
-    # (which only covers the portfolio repo) cannot intercept and downgrade auth.
+    # actions/checkout sets a *global* http.https://github.com/.extraheader with
+    # GITHUB_TOKEN, which overrides everything — including URL-embedded credentials.
+    # Overriding the same key at --local scope (submodule's own .git/config) takes
+    # precedence over global, so the PAT gets used instead.
     token = os.environ.get("GH_TOKEN", "")
     if token:
-        git("remote", "set-url", "origin",
-            f"https://x-access-token:{token}@github.com/rodmen07/microservices.git")
+        encoded = base64.b64encode(f"x-access-token:{token}".encode()).decode()
+        git("config", "--local", "http.https://github.com/.extraheader",
+            f"AUTHORIZATION: basic {encoded}")
     git("push", "origin", branch)
     log.info("Pushed branch: %s", branch)
 
