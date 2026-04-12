@@ -107,6 +107,12 @@ def commit_changes(service: str, gap: str) -> None:
 
 
 def push_branch(branch: str) -> None:
+    # Embed the PAT directly in the remote URL so the Actions credential helper
+    # (which only covers the portfolio repo) cannot intercept and downgrade auth.
+    token = os.environ.get("GH_TOKEN", "")
+    if token:
+        git("remote", "set-url", "origin",
+            f"https://x-access-token:{token}@github.com/rodmen07/microservices.git")
     git("push", "origin", branch)
     log.info("Pushed branch: %s", branch)
 
