@@ -124,6 +124,38 @@ jobs:
           cd agents/productionizer
           python main.py
 
+      # ── Push branch + open PR ────────────────────────────────────────────────
+      # Runs in shell where MICROSERVICES_PAT is a plain env var.
+      # GIT_CONFIG_GLOBAL=/dev/null bypasses the GITHUB_TOKEN extraheader that
+      # actions/checkout injects globally — so only the PAT URL credential is used.
+
+      - name: Push branch and open PR
+        env:
+          GH_TOKEN: ${{ secrets.MICROSERVICES_PAT }}
+        run: |
+          OUTPUT=agents/productionizer/.productionizer-output.json
+          if [ ! -f "$OUTPUT" ]; then
+            echo "No output file — agent did not produce a commit. Skipping push."
+            exit 0
+          fi
+
+          BRANCH=$(jq -r '.branch'    "$OUTPUT")
+          TITLE=$(jq  -r '.pr_title'  "$OUTPUT")
+          BODY=$(jq   -r '.pr_body'   "$OUTPUT")
+
+          echo "Pushing branch: $BRANCH"
+          GIT_CONFIG_GLOBAL=/dev/null git -C microservices push \
+            "https://x-access-token:${GH_TOKEN}@github.com/rodmen07/microservices.git" \
+            "${BRANCH}:${BRANCH}"
+
+          echo "Opening PR..."
+          gh pr create \
+            --repo rodmen07/microservices \
+            --base main \
+            --head "$BRANCH" \
+            --title "$TITLE" \
+            --body "$BODY"
+
       # ── State persistence ───────────────────────────────────────────────────
 
       - name: Save updated agent state
