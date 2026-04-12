@@ -28,7 +28,7 @@ import subprocess
 import sys
 
 from google import genai
-from google.genai import protos, types
+from google.genai import types
 
 from prompts import SYSTEM_PROMPT, build_task_prompt
 from tasks import build_task_queue, db_name_for_service, pick_next_task
@@ -252,8 +252,8 @@ def agent_loop(service: str, gap: str) -> str | None:
 
             log.debug("Tool result preview: %.200s", result_text)
             result_parts.append(
-                protos.Part(
-                    function_response=protos.FunctionResponse(
+                types.Part(
+                    function_response=types.FunctionResponse(
                         name=fn_name,
                         response={"result": result_text},
                     )
