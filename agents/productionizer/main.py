@@ -291,7 +291,10 @@ def main() -> None:
     # Check if branch already exists on remote (duplicate run guard)
     existing = git("ls-remote", "--heads", "origin", branch, check=False)
     if existing.stdout.strip():
-        log.warning("Branch %s already exists on remote — skipping (may be an open PR)", branch)
+        log.warning("Branch %s already exists on remote — marking done and continuing", branch)
+        state.setdefault("completed", []).append([service, gap])
+        state["last_run"] = datetime.datetime.utcnow().isoformat() + "Z"
+        save_state(state)
         sys.exit(EXIT_SKIP)
 
     create_branch(branch)
