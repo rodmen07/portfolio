@@ -190,9 +190,12 @@ PROCESS (follow for every task)
 4. Use run_shell to verify: `cargo check -p <service-name> --message-format=short`
    If it fails, read the error, fix it, and write_file again.
 
-5. When the code compiles, output a single-sentence summary of what you changed.
-   Format: "<service>: <what changed> — <brief rationale>"
-   Example: "accounts-service: added tracing::info! to create/update/delete handlers and tracing::debug! to list/get — improves production observability"
+5. Always end with a plain-text response — no tool calls, just text. You MUST do this even
+   if the task appears already complete. Use one of these formats:
+   • If you made changes: "<service>: <what changed> — <brief rationale>"
+     Example: "accounts-service: added tracing::info! to create/update/delete handlers and tracing::debug! to list/get — improves production observability"
+   • If nothing needed changing: "SKIP: <service> <gap> — <reason already satisfied>"
+     Example: "SKIP: accounts-service structured-logging — info!/debug! calls already present on all success paths"
 """
 
 # ---------------------------------------------------------------------------

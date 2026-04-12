@@ -293,16 +293,27 @@ def main() -> None:
     try:
         # Run the Gemini agent — it reads and writes files in microservices/
         summary = agent_loop(service, gap)
-        if not summary:
-            log.error("Agent produced no usable summary — reverting")
-            revert_changes(service)
-            sys.exit(1)
 
-        # Check if the agent actually changed anything
+        # Check for file changes first — an empty summary with no changes means
+        # the model concluded the task was already done. That's a clean exit.
         status = git("status", "--porcelain", service, check=False)
-        if not status.stdout.strip():
+        files_changed = bool(status.stdout.strip())
+
+        if not files_changed:
             log.info("Agent made no file changes (task may already be complete). Exiting cleanly.")
             sys.exit(0)
+
+        # Model may signal explicitly that the gap is already satisfied
+        if summary and summary.upper().startswith("SKIP:"):
+            log.info("Agent reported task already satisfied: %s", summary)
+            revert_changes(service)
+            sys.exit(0)
+
+        # Files were changed — ensure we have a summary (use fallback if model
+        # produced no text, which can happen with gemini-2.5-flash thinking mode).
+        if not summary:
+            summary = f"{service}: productionizer applied {gap} improvements"
+            log.warning("Agent produced no summary; using fallback: %s", summary)
 
         # Verify: clippy
         log.info("Running cargo clippy -p %s", service)
