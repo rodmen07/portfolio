@@ -67,6 +67,11 @@ jobs:
       - name: Init microservices submodule
         run: git submodule update --init microservices
 
+      - name: Set microservices remote URL for push
+        run: |
+          git -C microservices remote set-url origin \
+            https://x-access-token:${{ secrets.MICROSERVICES_PAT }}@github.com/rodmen07/microservices.git
+
       # ── Toolchains ──────────────────────────────────────────────────────────
 
       - name: Set up Python 3.13

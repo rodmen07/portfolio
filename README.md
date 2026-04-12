@@ -216,6 +216,8 @@ Portfolio/
         └── deploy-pipeline.yml           # Reference multi-env promotion template
 └── scripts/
     └── run-checks.ps1                    # Full workspace test runner
+└── agents/
+    └── productionizer/                   # Gemini 2.5 Flash autonomous coding agent
 └── dynamodb_prototype/                   # DynamoDB medallion pipeline
     ├── src/bin/                          # Rust pipeline binaries + dashboard
     ├── go-pipeline-monitor/              # Go service (Fly.io)
@@ -360,11 +362,17 @@ cargo test
 | v1.1.2 | Portfolio narrative fixes — all Dockerfiles cleaned of SQLite deps; all docs corrected to PostgreSQL (Cloud SQL) | ✅ Published |
 | v1.1.3 | activities-service cross-service validation — account_id and contact_id validated on create (matches contacts-service pattern) | ✅ Published |
 
-### v1.2 — Operational Maturity
+### v1.2 — Operational Maturity ✅ Complete
 
 | Sub-version | Feature | Status |
 |-------------|---------|--------|
-| v1.2.1 | Data export pipeline — bulk CSV/JSON export from reporting-service; admin export modal | Planned |
-| v1.2.2 | Audit trail & compliance — new `audit-service` (Rust/Axum), immutable CRM mutation log, admin audit page | Planned |
-| v1.2.3 | Portfolio observability — CRM services emit events to Observaboard; admin service health dashboard | Planned |
-| v1.2.4 | Service resilience & testing — E2E portal test suite, load testing tooling, chaos engineering runbook | Planned |
+| v1.2.1 | Data export pipeline — bulk CSV/JSON export from reporting-service; admin export modal | ✅ Published |
+| v1.2.2 | Audit trail & compliance — new `audit-service` (Rust/Axum), immutable CRM mutation log, admin audit page | ✅ Published |
+| v1.2.3 | Portfolio observability — CRM services emit events to Observaboard; admin service health dashboard | ✅ Published |
+| v1.2.4 | Service resilience & testing — integration tests for all 11 services, k6 load testing, chaos engineering runbook | ✅ Published |
+
+### v1.3 — Autonomous Operations
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.3.1 | Productionizer agent — Gemini 2.5 Flash autonomous agent runs daily, opens PRs to improve Rust microservices (structured logging, dynamic health checks, error details, audit error handling, test coverage) | Implemented |
