@@ -27,7 +27,8 @@ import pathlib
 import subprocess
 import sys
 
-import google.generativeai as genai
+from google import genai
+from google.genai import protos, types
 
 from prompts import SYSTEM_PROMPT, build_task_prompt
 from tasks import build_task_queue, db_name_for_service, pick_next_task
@@ -203,17 +204,18 @@ def agent_loop(service: str, gap: str) -> str | None:
         log.error("GOOGLE_API_KEY is not set")
         return None
 
-    genai.configure(api_key=api_key)
+    client = genai.Client(api_key=api_key)
     dispatch = make_dispatch(service)
     tool_declaration = build_tool_declaration()
 
-    model = genai.GenerativeModel(
-        model_name="gemini-2.0-flash",
-        system_instruction=SYSTEM_PROMPT,
-        tools=[tool_declaration],
+    chat = client.chats.create(
+        model="gemini-2.5-flash",
+        config=types.GenerateContentConfig(
+            system_instruction=SYSTEM_PROMPT,
+            tools=[tool_declaration],
+        ),
     )
 
-    chat = model.start_chat()
     user_prompt = build_task_prompt(service, gap)
     log.info("Starting agent loop for %s / %s", service, gap)
     response = chat.send_message(user_prompt)
@@ -221,12 +223,7 @@ def agent_loop(service: str, gap: str) -> str | None:
     summary: str | None = None
 
     for round_num in range(MAX_TOOL_ROUNDS):
-        # Collect function calls from this response
-        function_calls = []
-        for part in response.parts:
-            fc = getattr(part, "function_call", None)
-            if fc and getattr(fc, "name", None):
-                function_calls.append(fc)
+        function_calls = response.function_calls or []
 
         if not function_calls:
             # No tool calls → model produced a final text response
@@ -255,8 +252,8 @@ def agent_loop(service: str, gap: str) -> str | None:
 
             log.debug("Tool result preview: %.200s", result_text)
             result_parts.append(
-                genai.protos.Part(
-                    function_response=genai.protos.FunctionResponse(
+                protos.Part(
+                    function_response=protos.FunctionResponse(
                         name=fn_name,
                         response={"result": result_text},
                     )

@@ -8,7 +8,7 @@ import os
 import pathlib
 import subprocess
 
-import google.generativeai as genai
+from google.genai import types
 
 # ---------------------------------------------------------------------------
 # Workspace root
@@ -112,80 +112,75 @@ def run_shell(command: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Gemini tool definitions (genai.protos format)
+# Gemini tool definitions (google.genai types)
 # ---------------------------------------------------------------------------
 
-def build_tool_declaration() -> genai.protos.Tool:
-    """Return the Gemini Tool proto describing the three agent tools."""
-    S = genai.protos.Schema
-    T = genai.protos.Type
-
-    return genai.protos.Tool(
-        function_declarations=[
-            genai.protos.FunctionDeclaration(
-                name="read_file",
-                description=(
-                    "Read the complete contents of a file in the microservices workspace. "
-                    "Paths are relative to the microservices/ root. "
-                    "Always read ALL relevant files before making any writes."
-                ),
-                parameters=S(
-                    type=T.OBJECT,
-                    properties={
-                        "path": S(
-                            type=T.STRING,
-                            description=(
-                                "Relative path from microservices/ root, e.g. "
-                                "'accounts-service/src/lib/handlers/accounts.rs'"
-                            ),
-                        )
-                    },
-                    required=["path"],
-                ),
+def build_tool_declaration() -> types.Tool:
+    """Return the Gemini Tool describing the three agent tools."""
+    return types.Tool(function_declarations=[
+        types.FunctionDeclaration(
+            name="read_file",
+            description=(
+                "Read the complete contents of a file in the microservices workspace. "
+                "Paths are relative to the microservices/ root. "
+                "Always read ALL relevant files before making any writes."
             ),
-            genai.protos.FunctionDeclaration(
-                name="write_file",
-                description=(
-                    "Write (overwrite) the COMPLETE contents of a file. "
-                    "Always provide the entire file, never a diff or partial content. "
-                    "Only write files within the assigned service directory. "
-                    "Paths are relative to the microservices/ root."
-                ),
-                parameters=S(
-                    type=T.OBJECT,
-                    properties={
-                        "path": S(
-                            type=T.STRING,
-                            description="Relative path from microservices/ root.",
+            parameters_json_schema={
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": (
+                            "Relative path from microservices/ root, e.g. "
+                            "'accounts-service/src/lib/handlers/accounts.rs'"
                         ),
-                        "content": S(
-                            type=T.STRING,
-                            description="Complete file contents to write.",
-                        ),
-                    },
-                    required=["path", "content"],
-                ),
+                    }
+                },
+                "required": ["path"],
+            },
+        ),
+        types.FunctionDeclaration(
+            name="write_file",
+            description=(
+                "Write (overwrite) the COMPLETE contents of a file. "
+                "Always provide the entire file, never a diff or partial content. "
+                "Only write files within the assigned service directory. "
+                "Paths are relative to the microservices/ root."
             ),
-            genai.protos.FunctionDeclaration(
-                name="run_shell",
-                description=(
-                    "Run a read-only shell command inside the microservices/ directory. "
-                    "Use ONLY for inspection: grep, ls, cargo check --message-format=short. "
-                    "Do NOT use git, rm, mv, cp, curl, or wget."
-                ),
-                parameters=S(
-                    type=T.OBJECT,
-                    properties={
-                        "command": S(
-                            type=T.STRING,
-                            description="Shell command to run (read-only operations only).",
-                        )
+            parameters_json_schema={
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Relative path from microservices/ root.",
                     },
-                    required=["command"],
-                ),
+                    "content": {
+                        "type": "string",
+                        "description": "Complete file contents to write.",
+                    },
+                },
+                "required": ["path", "content"],
+            },
+        ),
+        types.FunctionDeclaration(
+            name="run_shell",
+            description=(
+                "Run a read-only shell command inside the microservices/ directory. "
+                "Use ONLY for inspection: grep, ls, cargo check --message-format=short. "
+                "Do NOT use git, rm, mv, cp, curl, or wget."
             ),
-        ]
-    )
+            parameters_json_schema={
+                "type": "object",
+                "properties": {
+                    "command": {
+                        "type": "string",
+                        "description": "Shell command to run (read-only operations only).",
+                    }
+                },
+                "required": ["command"],
+            },
+        ),
+    ])
 
 
 def make_dispatch(allowed_service: str) -> dict:

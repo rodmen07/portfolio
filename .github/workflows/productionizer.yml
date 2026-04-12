@@ -85,7 +85,7 @@ jobs:
           workspaces: "microservices -> target"
 
       - name: Install agent Python dependencies
-        run: pip install google-generativeai>=0.8.0
+        run: pip install "google-genai>=1.0.0"
 
       # ── State ───────────────────────────────────────────────────────────────
 
