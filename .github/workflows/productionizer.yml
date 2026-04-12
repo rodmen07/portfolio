@@ -143,6 +143,10 @@ jobs:
           TITLE=$(jq  -r '.pr_title'  "$OUTPUT")
           BODY=$(jq   -r '.pr_body'   "$OUTPUT")
 
+          echo "Verifying PAT can reach microservices repo..."
+          gh repo view rodmen07/microservices --json name,visibility || \
+            { echo "ERROR: MICROSERVICES_PAT cannot access rodmen07/microservices — check token scopes"; exit 1; }
+
           echo "Pushing branch: $BRANCH"
           GIT_CONFIG_GLOBAL=/dev/null git -C microservices push \
             "https://x-access-token:${GH_TOKEN}@github.com/rodmen07/microservices.git" \
