@@ -336,7 +336,7 @@ def main() -> None:
         if not ok:
             log.error("cargo clippy failed:\n%s", output)
             revert_changes(service)
-            sys.exit(1)
+            sys.exit(EXIT_SKIP)   # bad write — skip this task, loop continues
         log.info("clippy passed")
 
         # Verify: integration tests
@@ -345,7 +345,7 @@ def main() -> None:
         if not ok:
             log.error("cargo test failed:\n%s", output)
             revert_changes(service)
-            sys.exit(1)
+            sys.exit(EXIT_SKIP)   # bad write — skip this task, loop continues
         log.info("tests passed")
 
         # Commit + write output; push + PR are handled by the workflow step

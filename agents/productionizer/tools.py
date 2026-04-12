@@ -75,6 +75,16 @@ def write_file(path: str, content: str, allowed_service: str) -> str:
             f"Path given: {path}"
         )
 
+    # Sanitize Unicode "smart quotes" that LLMs sometimes emit.
+    # Rust 2021 treats word"..." as a reserved prefix and rejects the file.
+    content = (
+        content
+        .replace("\u201c", '"')   # LEFT DOUBLE QUOTATION MARK
+        .replace("\u201d", '"')   # RIGHT DOUBLE QUOTATION MARK
+        .replace("\u2018", "'")   # LEFT SINGLE QUOTATION MARK
+        .replace("\u2019", "'")   # RIGHT SINGLE QUOTATION MARK
+    )
+
     target = MICROSERVICES_ROOT / path
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
