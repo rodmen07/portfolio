@@ -19,7 +19,6 @@ Optional overrides (for workflow_dispatch manual triggers):
 
 from __future__ import annotations
 
-import base64
 import datetime
 import json
 import logging
@@ -108,16 +107,26 @@ def commit_changes(service: str, gap: str) -> None:
 
 
 def push_branch(branch: str) -> None:
-    # actions/checkout sets a *global* http.https://github.com/.extraheader with
-    # GITHUB_TOKEN, which overrides everything — including URL-embedded credentials.
-    # Overriding the same key at --local scope (submodule's own .git/config) takes
-    # precedence over global, so the PAT gets used instead.
+    # actions/checkout injects a global http.https://github.com/.extraheader with
+    # GITHUB_TOKEN. http.extraheader is multi-valued — git concatenates all config
+    # levels, so --local overrides don't help. Instead we use `git -c key=` (empty
+    # value) to suppress the header for this one invocation, and push directly to
+    # the PAT URL so the remote config doesn't matter.
     token = os.environ.get("GH_TOKEN", "")
     if token:
-        encoded = base64.b64encode(f"x-access-token:{token}".encode()).decode()
-        git("config", "--local", "http.https://github.com/.extraheader",
-            f"AUTHORIZATION: basic {encoded}")
-    git("push", "origin", branch)
+        url = f"https://x-access-token:{token}@github.com/rodmen07/microservices.git"
+        result = subprocess.run(
+            ["git", "-c", "http.https://github.com/.extraheader=",
+             "push", url, f"{branch}:{branch}"],
+            cwd=str(MICROSERVICES_ROOT),
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        if result.stderr:
+            log.debug("push stderr: %s", result.stderr.strip())
+    else:
+        git("push", "origin", branch)
     log.info("Pushed branch: %s", branch)
 
 
