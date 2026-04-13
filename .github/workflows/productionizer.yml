@@ -26,6 +26,8 @@ jobs:
     name: Productionize all remaining tasks
     runs-on: ubuntu-latest
     timeout-minutes: 360
+    permissions:
+      contents: write
 
     services:
       postgres:
@@ -83,11 +85,7 @@ jobs:
 
       # ── State ───────────────────────────────────────────────────────────────
 
-      - name: Restore agent state from cache
-        uses: actions/cache/restore@v4
-        with:
-          path: agents/productionizer/state.json
-          key: productionizer-state-v1
+      # state.json is committed to the repo — no cache restore needed
 
       # ── Database setup ──────────────────────────────────────────────────────
 
@@ -176,9 +174,14 @@ jobs:
 
       # ── State persistence ───────────────────────────────────────────────────
 
-      - name: Save updated agent state
+      - name: Commit updated agent state
         if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: agents/productionizer/state.json
-          key: productionizer-state-v1
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          if ! git diff --quiet agents/productionizer/state.json; then
+            git add agents/productionizer/state.json
+            git commit -m "chore(productionizer): update agent state [skip ci]"
+            git push
+          else
+            echo "state.json unchanged — nothing to commit."
+          fi

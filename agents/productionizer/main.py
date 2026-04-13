@@ -28,6 +28,7 @@ import subprocess
 import sys
 
 from google import genai
+from google.genai import errors as genai_errors
 from google.genai import types
 
 from prompts import SYSTEM_PROMPT, build_task_prompt
@@ -295,7 +296,7 @@ def main() -> None:
     if existing.stdout.strip():
         log.warning("Branch %s already exists on remote — marking done and continuing", branch)
         state.setdefault("completed", []).append([service, gap])
-        state["last_run"] = datetime.datetime.utcnow().isoformat() + "Z"
+        state["last_run"] = datetime.datetime.now(datetime.UTC).isoformat()
         save_state(state)
         sys.exit(EXIT_SKIP)
 
@@ -313,7 +314,7 @@ def main() -> None:
         if not files_changed:
             log.info("Agent made no file changes — marking task done and continuing.")
             state.setdefault("completed", []).append([service, gap])
-            state["last_run"] = datetime.datetime.utcnow().isoformat() + "Z"
+            state["last_run"] = datetime.datetime.now(datetime.UTC).isoformat()
             save_state(state)
             sys.exit(EXIT_SKIP)
 
@@ -322,7 +323,7 @@ def main() -> None:
             log.info("Agent reported task already satisfied: %s", summary)
             revert_changes(service)
             state.setdefault("completed", []).append([service, gap])
-            state["last_run"] = datetime.datetime.utcnow().isoformat() + "Z"
+            state["last_run"] = datetime.datetime.now(datetime.UTC).isoformat()
             save_state(state)
             sys.exit(EXIT_SKIP)
 
@@ -357,18 +358,30 @@ def main() -> None:
 
         # Persist state
         state.setdefault("completed", []).append([service, gap])
-        state["last_run"] = datetime.datetime.utcnow().isoformat() + "Z"
+        state["last_run"] = datetime.datetime.now(datetime.UTC).isoformat()
         save_state(state)
         log.info("State saved. Total completed: %d", len(state["completed"]))
 
     except subprocess.CalledProcessError as exc:
         log.exception("Git or gh command failed: %s\nstderr: %s", exc, exc.stderr)
         revert_changes(service)
-        sys.exit(1)
+        sys.exit(EXIT_ERROR)
     except Exception as exc:
+        # Treat transient Gemini 5xx errors as skippable. The isinstance check
+        # against genai_errors.ServerError can fail at runtime due to import
+        # mismatches, so also gate on class name and status_code attribute.
+        is_transient = (
+            isinstance(exc, genai_errors.ServerError)
+            or type(exc).__name__ == "ServerError"
+            or (hasattr(exc, "status_code") and getattr(exc, "status_code", 0) >= 500)
+        )
+        if is_transient:
+            log.warning("Transient Gemini API error — reverting and skipping: %s", exc)
+            revert_changes(service)
+            sys.exit(EXIT_SKIP)
         log.exception("Unexpected error — reverting: %s", exc)
         revert_changes(service)
-        sys.exit(1)
+        sys.exit(EXIT_ERROR)
 
 
 if __name__ == "__main__":
