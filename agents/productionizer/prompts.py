@@ -161,6 +161,79 @@ Use the existing helpers: test_app(), make_jwt(), body_json() — do not define 
 If all meaningful error paths are already tested, write a single comment explaining this
 and make NO file changes. In that case, output a summary noting it was already complete.
 
+## Gap: unwrap-elimination
+
+Find and fix `.unwrap()` and `.expect(...)` calls in handler files that can panic at runtime.
+
+SCOPE — only look at these files:
+  • src/lib/handlers/<resource>.rs (all handler files)
+  • src/lib/router.rs
+  • src/lib/models.rs (if it contains runtime logic)
+  • DO NOT touch: tests/, main.rs, auth.rs, lib.rs, app_state.rs, Cargo.toml
+
+WHAT TO FIX:
+  • `.unwrap()` on `Option<T>` → use `.ok_or_else(|| error_response(StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "unexpected None value", None))?`
+  • `.unwrap()` or `.expect(...)` on `Result<T, E>` → use `?` if the function already returns `Result<..., (StatusCode, Json<ApiError>)>`, otherwise use `map_err`
+  • `.expect("static string")` on values that are infallible at startup (e.g. regex compilation in a `once_cell::sync::Lazy` or `OnceLock`) — LEAVE THESE ALONE, they cannot fail at request time
+  • `.unwrap()` inside test functions — LEAVE THESE ALONE
+
+RULES:
+  • Only change `.unwrap()` / `.expect()` that can realistically panic during a live request.
+  • Do NOT change the function signature. Do NOT add new dependencies.
+  • If a `.unwrap()` is on a type that is actually infallible (e.g. hardcoded string to UUID parse, compile-time constant), leave it and note it in your summary.
+  • If there are no problematic `.unwrap()` / `.expect()` calls in handler files, output SKIP.
+
+PROCESS:
+  1. Read each handler file.
+  2. List every `.unwrap()` / `.expect()` found.
+  3. Classify each: runtime-panic-risk vs infallible.
+  4. Fix only the runtime-panic-risk ones.
+  5. Run `cargo check -p <service> --message-format=short` to verify.
+
+## Gap: input-validation
+
+Add server-side validation for required string fields in POST and PATCH handlers
+before they reach the database. Missing validation causes DB constraint errors to
+surface as opaque 500 Internal Server Error responses instead of clean 400s.
+
+WHAT TO VALIDATE:
+  • Required non-empty string fields (name, title, description, email, etc.): reject empty strings and whitespace-only strings.
+  • String length: reject strings longer than 255 characters for name/title fields, 1000 characters for description/notes fields.
+  • Use `.trim().is_empty()` to detect whitespace-only input.
+  • Do NOT validate optional fields (Option<String>) for emptiness — they may legitimately be None.
+  • Do NOT add email format regex or complex format checks — keep it simple.
+
+ERROR RESPONSE FORMAT:
+  Use the existing `error_response` helper or build `ApiError` directly:
+  ```rust
+  if req.name.trim().is_empty() {
+      return Err(error_response(
+          StatusCode::BAD_REQUEST,
+          "VALIDATION_ERROR",
+          "name must not be empty",
+          Some(json!({ "field": "name", "constraint": "must not be empty" })),
+      ));
+  }
+  if req.name.len() > 255 {
+      return Err(error_response(
+          StatusCode::BAD_REQUEST,
+          "VALIDATION_ERROR",
+          "name exceeds maximum length",
+          Some(json!({ "field": "name", "constraint": "max 255 characters" })),
+      ));
+  }
+  ```
+
+PROCESS (mandatory):
+  1. Read the handler file(s) for POST (create) and PATCH (update) operations.
+  2. Read models.rs to see the request struct fields and their types.
+  3. Identify required String fields (non-Option<String>) in the request body struct.
+  4. Add validation checks at the top of each create/update handler, before the DB query.
+  5. Do NOT validate fields that already have validation present — check first.
+  6. Run `cargo check -p <service> --message-format=short` to verify.
+
+If all required fields are already validated, output SKIP.
+
 ════════════════════════════════════════════════════════════════
 ABSOLUTE PROHIBITIONS
 ════════════════════════════════════════════════════════════════
@@ -228,6 +301,18 @@ _GAP_DESCRIPTIONS: dict[str, str] = {
         "Add integration test cases for error paths not yet covered. "
         "You MUST read `tests/integration_test.rs` first and only add tests for "
         "genuinely missing cases."
+    ),
+    "unwrap-elimination": (
+        "Find and fix `.unwrap()` / `.expect(...)` calls in handler files that can panic at runtime. "
+        "Files to read first: all `src/lib/handlers/*.rs`. "
+        "Leave `.unwrap()` in test code, main.rs, and infallible startup contexts (OnceLock/Lazy). "
+        "Replace runtime-panic-risk unwraps with `?` or `ok_or_else` returning ApiError."
+    ),
+    "input-validation": (
+        "Add non-empty and max-length validation on required String fields in POST/PATCH handlers "
+        "before DB operations. Files to read first: `src/lib/handlers/<resource>.rs` and "
+        "`src/lib/models.rs`. Only validate non-Option<String> fields. Use `error_response` helper "
+        "with VALIDATION_ERROR code and a `details` json with `field` and `constraint` keys."
     ),
 }
 

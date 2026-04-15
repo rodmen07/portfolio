@@ -25,6 +25,8 @@ GAPS = [
     "error-details",         # Populate ApiError.details on all validation errors
     "audit-error-handling",  # Replace silent let _ = emit_audit with warn! logging
     "error-path-tests",      # Add integration test cases for error paths not yet covered
+    "unwrap-elimination",    # Replace .unwrap()/.expect() in handler code with ? or error returns
+    "input-validation",      # Add length/non-empty validation on string fields before DB ops
 ]
 
 
