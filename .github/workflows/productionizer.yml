@@ -179,7 +179,8 @@ jobs:
             echo "Pushing branch: $BRANCH"
             git -C infraportal push \
               "https://x-access-token:${GH_TOKEN}@github.com/rodmen07/infraportal.git" \
-              "${BRANCH}:${BRANCH}"
+              "${BRANCH}:${BRANCH}" \
+              || echo "WARNING: branch push failed — check INFRAPORTAL_PAT has Contents:write on infraportal"
 
             echo "Opening PR..."
             gh pr create \
@@ -187,7 +188,8 @@ jobs:
               --base main \
               --head "$BRANCH" \
               --title "$TITLE" \
-              --body "$BODY"
+              --body "$BODY" \
+              || echo "WARNING: PR creation failed — check INFRAPORTAL_PAT has Pull requests:write on infraportal"
 
             rm -f "$OUTPUT"
 
