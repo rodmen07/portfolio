@@ -1,72 +1,47 @@
 """
-Task catalog for the productionizer agent.
-55 tasks total: 11 services × 5 gap types, iterated gap-first so all services
-receive the highest-priority improvement before any receive the second, etc.
+Task catalog for the productionizer agent — infraportal edition.
+Target: rodmen07/infraportal (React 19 / TypeScript strict / Vite 5 / Tailwind CSS)
+30 tasks total: 10 pages × 3 gap types, iterated gap-first.
 """
 
-SERVICES = [
-    "accounts-service",
-    "activities-service",
-    "audit-service",
-    "automation-service",
-    "contacts-service",
-    "integrations-service",
-    "opportunities-service",
-    "projects-service",
-    "reporting-service",
-    "search-service",
-    "spend-service",
+PAGES = [
+    "PortalPage",         # src/pages/PortalPage.tsx       — main task portal (~34KB)
+    "CrmAdminPage",       # src/pages/CrmAdminPage.tsx     — CRM admin (~94KB)
+    "AuditPage",          # src/pages/AuditPage.tsx        — audit log
+    "ReportsPage",        # src/pages/ReportsPage.tsx      — reports dashboard
+    "ObservaboardPage",   # src/pages/ObservaboardPage.tsx — observability metrics
+    "SearchPage",         # src/pages/SearchPage.tsx       — global search
+    "ServiceHealthPage",  # src/pages/ServiceHealthPage.tsx — service health
+    "UserDashboardPage",  # src/pages/UserDashboardPage.tsx — user dashboard
+    "PortalLoginPage",    # src/pages/PortalLoginPage.tsx  — login form
+    "ContactPage",        # src/pages/ContactPage.tsx      — contact form
 ]
 
 # Gap IDs in priority order (highest impact first)
 GAPS = [
-    "structured-logging",    # Add tracing::info!/debug! to handler business logic
-    "dynamic-health",        # /health and /ready do a live DB ping instead of hardcoded "ok"
-    "error-details",         # Populate ApiError.details on all validation errors
-    "audit-error-handling",  # Replace silent let _ = emit_audit with warn! logging
-    "error-path-tests",      # Add integration test cases for error paths not yet covered
-    "unwrap-elimination",    # Replace .unwrap()/.expect() in handler code with ? or error returns
-    "input-validation",      # Add length/non-empty validation on string fields before DB ops
+    "aria-labels",        # Add aria-label to icon-only buttons and unlabelled inputs
+    "keyboard-nav",       # Add keyboard handlers to clickable non-button divs/spans
+    "typed-interfaces",   # Extract implicit types into named TypeScript interfaces
 ]
 
 
 def build_task_queue() -> list[tuple[str, str]]:
-    """Return all (service, gap) pairs in gap-first priority order."""
-    return [(gap, service) for gap in GAPS for service in SERVICES]
+    """Return all (page, gap) pairs in gap-first priority order."""
+    return [(gap, page) for gap in GAPS for page in PAGES]
 
 
 def pick_next_task(state: dict) -> tuple[str, str] | None:
     """
-    Return the first (service, gap) pair not yet in state['completed'], or None
-    if all 55 tasks are done.
+    Return the first (page, gap) pair not yet in state['completed'], or None
+    if all 30 tasks are done.
     """
-    completed = {(svc, gap) for svc, gap in state.get("completed", [])}
-    for gap, service in build_task_queue():
-        if (service, gap) not in completed:
-            return service, gap
+    completed = {(page, gap) for page, gap in state.get("completed", [])}
+    for gap, page in build_task_queue():
+        if (page, gap) not in completed:
+            return page, gap
     return None
 
 
-_SERVICE_TO_DB: dict[str, str] = {
-    "accounts-service":     "accounts",
-    "activities-service":   "activities",
-    "audit-service":        "audit",
-    "automation-service":   "workflows",
-    "contacts-service":     "contacts",
-    "integrations-service": "connections",
-    "opportunities-service": "opportunities",
-    "projects-service":     "projects",
-    "reporting-service":    "reports",
-    "search-service":       "documents",
-    "spend-service":        "spend",
-}
-
-
-def db_name_for_service(service: str) -> str:
-    """Return the PostgreSQL database name for a given service.
-
-    These names match the CI setup in microservices/.github/workflows/rust.yml.
-    """
-    if service not in _SERVICE_TO_DB:
-        raise ValueError(f"Unknown service: {service}. Add it to _SERVICE_TO_DB.")
-    return _SERVICE_TO_DB[service]
+def file_path_for_page(page: str) -> str:
+    """Return the src-relative file path for a given page component."""
+    return f"src/pages/{page}.tsx"

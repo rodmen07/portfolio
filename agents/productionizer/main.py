@@ -1,20 +1,20 @@
 """
-Productionizer agent — main orchestration loop.
+Productionizer agent — main orchestration loop — infraportal edition.
 
 Each run:
-  1. Load state (which service/gap combinations are done)
-  2. Pick the next (service, gap) task
-  3. Create a git branch in the microservices/ submodule
-  4. Run the Gemini 2.0 Flash agentic loop (reads/writes files via tools)
-  5. Verify: cargo clippy + cargo test in CI environment
-  6. On success: commit, push branch, open a PR
+  1. Load state (which page/gap combinations are done)
+  2. Pick the next (page, gap) task
+  3. Create a git branch in the infraportal/ clone
+  4. Run the Gemini agentic loop (reads/writes files via tools)
+  5. Verify: npx tsc --noEmit + npx eslint
+  6. On success: commit, push branch, open a PR against rodmen07/infraportal
   7. Save updated state
 
 Usage (GitHub Actions sets env vars automatically):
   GOOGLE_API_KEY=...  GH_TOKEN=...  python agents/productionizer/main.py
 
 Optional overrides (for workflow_dispatch manual triggers):
-  FORCE_SERVICE=accounts-service  FORCE_GAP=structured-logging
+  FORCE_PAGE=AuditPage  FORCE_GAP=aria-labels
 """
 
 from __future__ import annotations
@@ -32,8 +32,8 @@ from google.genai import errors as genai_errors
 from google.genai import types
 
 from prompts import SYSTEM_PROMPT, build_task_prompt
-from tasks import build_task_queue, db_name_for_service, pick_next_task
-from tools import MICROSERVICES_ROOT, build_tool_declaration, make_dispatch
+from tasks import build_task_queue, file_path_for_page, pick_next_task
+from tools import INFRAPORTAL_ROOT, build_tool_declaration, make_dispatch
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -75,13 +75,13 @@ def save_state(state: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Git operations (all inside microservices/ submodule)
+# Git operations (all inside infraportal/ clone)
 # ---------------------------------------------------------------------------
 
 def git(*args: str, check: bool = True) -> subprocess.CompletedProcess:
     result = subprocess.run(
         ["git", *args],
-        cwd=str(MICROSERVICES_ROOT),
+        cwd=str(INFRAPORTAL_ROOT),
         capture_output=True,
         text=True,
         check=check,
@@ -89,57 +89,57 @@ def git(*args: str, check: bool = True) -> subprocess.CompletedProcess:
     return result
 
 
-def branch_name(service: str, gap: str) -> str:
+def branch_name(page: str, gap: str) -> str:
     date = datetime.date.today().strftime("%Y%m%d")
     slug = gap.replace("-", "_")
-    return f"productionizer/{date}/{service}/{slug}"
+    return f"productionizer/{date}/{page}/{slug}"
 
 
 def create_branch(branch: str) -> None:
-    log.info("Fetching origin/main in microservices submodule")
+    log.info("Fetching origin/main in infraportal clone")
     git("fetch", "origin", "main")
-    # -B creates the branch if new, or resets it to origin/main if it already
-    # exists locally (e.g. left over from a previous failed clippy run).
     git("checkout", "-B", branch, "origin/main")
     log.info("Created branch: %s", branch)
 
 
-def commit_changes(service: str, gap: str) -> None:
-    git("add", service)
+def commit_changes(page: str, gap: str) -> None:
+    file_path = file_path_for_page(page)
+    git("add", file_path)
     msg = (
-        f"fix({service}): productionizer — {gap}\n\n"
-        f"Automated improvement applied by the productionizer agent.\n"
+        f"fix({page}): productionizer — {gap}\n\n"
+        f"Automated accessibility improvement applied by the productionizer agent.\n"
         f"Gap: {gap}\n"
-        f"Service: {service}"
+        f"Page: {page}"
     )
     git("commit", "-m", msg)
-    log.info("Committed changes for %s / %s", service, gap)
+    log.info("Committed changes for %s / %s", page, gap)
 
 
-def revert_changes(service: str) -> None:
-    """Hard-reset the service directory back to origin/main HEAD and remove untracked files."""
-    log.warning("Reverting changes to %s", service)
-    git("checkout", "HEAD", "--", service, check=False)
-    git("clean", "-fd", service, check=False)
+def revert_changes(page: str) -> None:
+    """Hard-reset the page file back to origin/main HEAD and remove untracked files."""
+    log.warning("Reverting changes to %s", page)
+    file_path = file_path_for_page(page)
+    git("checkout", "HEAD", "--", file_path, check=False)
+    git("clean", "-fd", file_path, check=False)
 
 
-def write_output(branch: str, service: str, gap: str, summary: str) -> None:
+def write_output(branch: str, page: str, gap: str, summary: str) -> None:
     """Write branch + PR metadata for the workflow push/PR step."""
-    title = f"fix({service}): {gap} — productionizer"
+    title = f"fix({page}): {gap} — productionizer"
     body = (
         f"## Summary\n\n"
-        f"Automated productionizer improvement.\n\n"
-        f"- **Service**: `{service}`\n"
+        f"Automated productionizer accessibility improvement.\n\n"
+        f"- **Page**: `{page}`\n"
         f"- **Gap**: `{gap}`\n"
         f"- **Change**: {summary}\n\n"
         f"## Verification\n\n"
-        f"- `cargo clippy` passed (zero new warnings)\n"
-        f"- `cargo test` (integration tests) passed\n\n"
+        f"- `npx tsc --noEmit` passed (zero type errors)\n"
+        f"- `npx eslint src/pages/{page}.tsx --max-warnings=0` passed\n\n"
         f"> Generated by the productionizer agent — review before merging."
     )
     OUTPUT_FILE.write_text(json.dumps({
         "branch": branch,
-        "service": service,
+        "page": page,
         "gap": gap,
         "pr_title": title,
         "pr_body": body,
@@ -148,54 +148,40 @@ def write_output(branch: str, service: str, gap: str, summary: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Cargo verification
+# npm/tsc/eslint verification
 # ---------------------------------------------------------------------------
 
-def run_cargo(service: str, subcommand: str) -> tuple[bool, str]:
-    """Run cargo clippy or cargo test for a service. Returns (success, output)."""
-    db = db_name_for_service(service)
-    database_url = os.environ.get(
-        "DATABASE_URL",
-        f"postgres://postgres:postgres@localhost:5432/{db}",
-    )
-    allowed_origins = os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173")
-
-    if subcommand == "clippy":
-        cmd = ["cargo", "clippy", "-p", service, "--", "-D", "warnings"]
-    elif subcommand == "test":
-        cmd = ["cargo", "test", "-p", service, "--test", "integration_test"]
+def run_npm(page: str, subcommand: str) -> tuple[bool, str]:
+    """Run tsc or eslint verification for a page. Returns (success, output)."""
+    if subcommand == "tsc":
+        cmd = ["npx", "tsc", "--noEmit"]
+    elif subcommand == "eslint":
+        file_path = file_path_for_page(page)
+        cmd = ["npx", "eslint", file_path, "--max-warnings=0"]
     else:
         raise ValueError(f"Unknown subcommand: {subcommand}")
-
-    env = {
-        **os.environ,
-        "DATABASE_URL": database_url,
-        "ALLOWED_ORIGINS": allowed_origins,
-        "AUTH_JWT_SECRET": os.environ.get("AUTH_JWT_SECRET", "dev-insecure-secret-change-me"),
-    }
 
     try:
         result = subprocess.run(
             cmd,
-            cwd=str(MICROSERVICES_ROOT),
+            cwd=str(INFRAPORTAL_ROOT),
             capture_output=True,
             text=True,
-            timeout=300,
-            env=env,
+            timeout=120,
         )
         output = (result.stdout + result.stderr)[:10_000]
         return result.returncode == 0, output
     except subprocess.TimeoutExpired:
-        return False, "ERROR: cargo command timed out after 5 minutes"
+        return False, f"ERROR: {subcommand} timed out after 2 minutes"
 
 
 # ---------------------------------------------------------------------------
 # Gemini agentic loop
 # ---------------------------------------------------------------------------
 
-def agent_loop(service: str, gap: str) -> str | None:
+def agent_loop(page: str, gap: str) -> str | None:
     """
-    Run the Gemini 2.0 Flash tool-call loop.
+    Run the Gemini agentic tool-call loop.
     Returns the agent's final summary string, or None on failure.
     """
     api_key = os.environ.get("GOOGLE_API_KEY")
@@ -204,7 +190,8 @@ def agent_loop(service: str, gap: str) -> str | None:
         return None
 
     client = genai.Client(api_key=api_key)
-    dispatch = make_dispatch(service)
+    allowed_file = file_path_for_page(page)
+    dispatch = make_dispatch(allowed_file)
     tool_declaration = build_tool_declaration()
 
     chat = client.chats.create(
@@ -215,8 +202,8 @@ def agent_loop(service: str, gap: str) -> str | None:
         ),
     )
 
-    user_prompt = build_task_prompt(service, gap)
-    log.info("Starting agent loop for %s / %s", service, gap)
+    user_prompt = build_task_prompt(page, gap)
+    log.info("Starting agent loop for %s / %s", page, gap)
     response = chat.send_message(user_prompt)
 
     summary: str | None = None
@@ -225,7 +212,6 @@ def agent_loop(service: str, gap: str) -> str | None:
         function_calls = response.function_calls or []
 
         if not function_calls:
-            # No tool calls → model produced a final text response
             summary = getattr(response, "text", None) or ""
             if len(summary.strip()) < 20:
                 log.warning("Agent summary too short (%d chars): %r", len(summary), summary)
@@ -234,7 +220,6 @@ def agent_loop(service: str, gap: str) -> str | None:
                 log.info("Agent concluded after %d rounds. Summary: %s", round_num + 1, summary)
             break
 
-        # Execute tool calls and collect results
         result_parts = []
         for fc in function_calls:
             fn_name = fc.name
@@ -274,28 +259,27 @@ def agent_loop(service: str, gap: str) -> str | None:
 def main() -> None:
     state = load_state()
 
-    # Allow manual override via environment variables
-    force_service = os.environ.get("FORCE_SERVICE", "").strip()
-    force_gap = os.environ.get("FORCE_GAP", "").strip()
+    force_page = os.environ.get("FORCE_PAGE", "").strip()
+    force_gap  = os.environ.get("FORCE_GAP", "").strip()
 
-    if force_service and force_gap:
-        service, gap = force_service, force_gap
-        log.info("Using forced task: %s / %s", service, gap)
+    if force_page and force_gap:
+        page, gap = force_page, force_gap
+        log.info("Using forced task: %s / %s", page, gap)
     else:
         task = pick_next_task(state)
         if task is None:
             log.info("All %d tasks are complete. Nothing to do.", len(build_task_queue()))
             sys.exit(EXIT_DONE)
-        service, gap = task
-        log.info("Selected next task: %s / %s", service, gap)
+        page, gap = task
+        log.info("Selected next task: %s / %s", page, gap)
 
-    branch = branch_name(service, gap)
+    branch = branch_name(page, gap)
 
     # Check if branch already exists on remote (duplicate run guard)
     existing = git("ls-remote", "--heads", "origin", branch, check=False)
     if existing.stdout.strip():
         log.warning("Branch %s already exists on remote — marking done and continuing", branch)
-        state.setdefault("completed", []).append([service, gap])
+        state.setdefault("completed", []).append([page, gap])
         state["last_run"] = datetime.datetime.now(datetime.UTC).isoformat()
         save_state(state)
         sys.exit(EXIT_SKIP)
@@ -303,73 +287,62 @@ def main() -> None:
     create_branch(branch)
 
     try:
-        # Run the Gemini agent — it reads and writes files in microservices/
-        summary = agent_loop(service, gap)
+        summary = agent_loop(page, gap)
 
-        # Check for file changes first — an empty summary with no changes means
-        # the model concluded the task was already done. That's a clean exit.
-        status = git("status", "--porcelain", service, check=False)
+        file_path = file_path_for_page(page)
+        status = git("status", "--porcelain", file_path, check=False)
         files_changed = bool(status.stdout.strip())
 
         if not files_changed:
             log.info("Agent made no file changes — marking task done and continuing.")
-            state.setdefault("completed", []).append([service, gap])
+            state.setdefault("completed", []).append([page, gap])
             state["last_run"] = datetime.datetime.now(datetime.UTC).isoformat()
             save_state(state)
             sys.exit(EXIT_SKIP)
 
-        # Model may signal explicitly that the gap is already satisfied
         if summary and summary.upper().startswith("SKIP:"):
             log.info("Agent reported task already satisfied: %s", summary)
-            revert_changes(service)
-            state.setdefault("completed", []).append([service, gap])
+            revert_changes(page)
+            state.setdefault("completed", []).append([page, gap])
             state["last_run"] = datetime.datetime.now(datetime.UTC).isoformat()
             save_state(state)
             sys.exit(EXIT_SKIP)
 
-        # Files were changed — ensure we have a summary (use fallback if model
-        # produced no text, which can happen with gemini-2.5-flash thinking mode).
         if not summary:
-            summary = f"{service}: productionizer applied {gap} improvements"
+            summary = f"{page}: productionizer applied {gap} improvements"
             log.warning("Agent produced no summary; using fallback: %s", summary)
 
-        # Verify: clippy
-        log.info("Running cargo clippy -p %s", service)
-        ok, output = run_cargo(service, "clippy")
+        # Verify: tsc
+        log.info("Running npx tsc --noEmit in infraportal/")
+        ok, output = run_npm(page, "tsc")
         if not ok:
-            log.error("cargo clippy failed:\n%s", output)
-            revert_changes(service)
-            sys.exit(EXIT_SKIP)   # bad write — skip this task, loop continues
-        log.info("clippy passed")
+            log.error("tsc --noEmit failed:\n%s", output)
+            revert_changes(page)
+            sys.exit(EXIT_SKIP)
+        log.info("tsc passed")
 
-        # Verify: integration tests
-        log.info("Running cargo test -p %s --test integration_test", service)
-        ok, output = run_cargo(service, "test")
+        # Verify: eslint
+        log.info("Running npx eslint %s --max-warnings=0", file_path_for_page(page))
+        ok, output = run_npm(page, "eslint")
         if not ok:
-            log.error("cargo test failed:\n%s", output)
-            revert_changes(service)
-            sys.exit(EXIT_SKIP)   # bad write — skip this task, loop continues
-        log.info("tests passed")
+            log.error("eslint failed:\n%s", output)
+            revert_changes(page)
+            sys.exit(EXIT_SKIP)
+        log.info("eslint passed")
 
-        # Commit + write output; push + PR are handled by the workflow step
-        # that follows, where $MICROSERVICES_PAT is available as a plain shell var.
-        commit_changes(service, gap)
-        write_output(branch, service, gap, summary)
+        commit_changes(page, gap)
+        write_output(branch, page, gap, summary)
 
-        # Persist state
-        state.setdefault("completed", []).append([service, gap])
+        state.setdefault("completed", []).append([page, gap])
         state["last_run"] = datetime.datetime.now(datetime.UTC).isoformat()
         save_state(state)
         log.info("State saved. Total completed: %d", len(state["completed"]))
 
     except subprocess.CalledProcessError as exc:
         log.exception("Git or gh command failed: %s\nstderr: %s", exc, exc.stderr)
-        revert_changes(service)
+        revert_changes(page)
         sys.exit(EXIT_ERROR)
     except Exception as exc:
-        # Treat transient Gemini 5xx errors as skippable. The isinstance check
-        # against genai_errors.ServerError can fail at runtime due to import
-        # mismatches, so also gate on class name and status_code attribute.
         is_transient = (
             isinstance(exc, genai_errors.ServerError)
             or type(exc).__name__ == "ServerError"
@@ -377,10 +350,10 @@ def main() -> None:
         )
         if is_transient:
             log.warning("Transient Gemini API error — reverting and skipping: %s", exc)
-            revert_changes(service)
+            revert_changes(page)
             sys.exit(EXIT_SKIP)
         log.exception("Unexpected error — reverting: %s", exc)
-        revert_changes(service)
+        revert_changes(page)
         sys.exit(EXIT_ERROR)
 
 

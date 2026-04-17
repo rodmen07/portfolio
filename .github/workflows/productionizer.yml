@@ -1,17 +1,18 @@
 name: Productionizer Agent
 
-# All 55 tasks in the matrix are complete. Schedule trigger removed.
-# Can still be triggered manually with optional service/gap overrides.
+# Repurposed for infraportal (React/TypeScript frontend accessibility improvements).
+# 30 tasks: 10 pages x 3 gap types (aria-labels, keyboard-nav, typed-interfaces).
+# Triggered manually only; cron removed since the agent manages its own state loop.
 
 on:
   workflow_dispatch:
     inputs:
-      force_service:
-        description: "Service to target (e.g. accounts-service). Leave blank for auto-select."
+      force_page:
+        description: "Page to target (e.g. AuditPage). Leave blank for auto-select."
         required: false
         default: ""
       force_gap:
-        description: "Gap to fix (structured-logging | dynamic-health | error-details | audit-error-handling | error-path-tests). Leave blank for auto-select."
+        description: "Gap to fix (aria-labels | keyboard-nav | typed-interfaces). Leave blank for auto-select."
         required: false
         default: ""
 
@@ -27,24 +28,6 @@ jobs:
     permissions:
       contents: write
 
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    env:
-      CARGO_TERM_COLOR: always
-
     steps:
       # ── Checkout ────────────────────────────────────────────────────────────
 
@@ -58,8 +41,13 @@ jobs:
           git config --global user.name  "productionizer-bot"
           git config --global user.email "productionizer@users.noreply.github.com"
 
-      - name: Init microservices submodule
-        run: git submodule update --init microservices
+      - name: Clone infraportal
+        env:
+          INFRAPORTAL_PAT: ${{ secrets.INFRAPORTAL_PAT }}
+        run: |
+          git clone \
+            "https://x-access-token:${INFRAPORTAL_PAT}@github.com/rodmen07/infraportal.git" \
+            infraportal
 
       # ── Toolchains ──────────────────────────────────────────────────────────
 
@@ -68,32 +56,19 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Install Rust toolchain (stable + clippy)
-        uses: dtolnay/rust-toolchain@stable
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          components: clippy
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: infraportal/package-lock.json
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: "microservices -> target"
+      - name: Install infraportal dependencies
+        run: npm ci
+        working-directory: infraportal
 
       - name: Install agent Python dependencies
         run: pip install "google-genai>=1.0.0"
-
-      # ── State ───────────────────────────────────────────────────────────────
-
-      # state.json is committed to the repo — no cache restore needed
-
-      # ── Database setup ──────────────────────────────────────────────────────
-
-      - name: Create per-service test databases
-        env:
-          PGPASSWORD: postgres
-        run: |
-          for db in accounts contacts activities workflows connections opportunities reports documents spend projects audit; do
-            psql -h localhost -U postgres -c "CREATE DATABASE ${db};" || true
-          done
 
       # ── Main loop ───────────────────────────────────────────────────────────
       # Python exit codes:
@@ -104,20 +79,18 @@ jobs:
 
       - name: Run productionizer loop
         env:
-          GOOGLE_API_KEY:  ${{ secrets.GOOGLE_API_KEY }}
-          GH_TOKEN:        ${{ secrets.MICROSERVICES_PAT }}
-          FORCE_SERVICE:   ${{ inputs.force_service }}
-          FORCE_GAP:       ${{ inputs.force_gap }}
-          ALLOWED_ORIGINS: "http://localhost:5173"
-          AUTH_JWT_SECRET: "dev-insecure-secret-change-me"
+          GOOGLE_API_KEY:   ${{ secrets.GOOGLE_API_KEY }}
+          GH_TOKEN:         ${{ secrets.INFRAPORTAL_PAT }}
+          FORCE_PAGE:       ${{ inputs.force_page }}
+          FORCE_GAP:        ${{ inputs.force_gap }}
         run: |
           set +e  # exit codes are handled manually; don't let bash -e kill the loop
           OUTPUT=agents/productionizer/.productionizer-output.json
 
-          # Verify PAT can reach microservices repo before starting the loop
-          gh repo view rodmen07/microservices --json name,visibility
+          # Verify PAT can reach infraportal repo before starting the loop
+          gh repo view rodmen07/infraportal --json name,visibility
           if [ $? -ne 0 ]; then
-            echo "ERROR: MICROSERVICES_PAT cannot access rodmen07/microservices"
+            echo "ERROR: INFRAPORTAL_PAT cannot access rodmen07/infraportal"
             exit 1
           fi
 
@@ -154,13 +127,13 @@ jobs:
             BODY=$(jq   -r '.pr_body'  "$OUTPUT")
 
             echo "Pushing branch: $BRANCH"
-            GIT_CONFIG_GLOBAL=/dev/null git -C microservices push \
-              "https://x-access-token:${GH_TOKEN}@github.com/rodmen07/microservices.git" \
+            GIT_CONFIG_GLOBAL=/dev/null git -C infraportal push \
+              "https://x-access-token:${GH_TOKEN}@github.com/rodmen07/infraportal.git" \
               "${BRANCH}:${BRANCH}"
 
             echo "Opening PR..."
             gh pr create \
-              --repo rodmen07/microservices \
+              --repo rodmen07/infraportal \
               --base main \
               --head "$BRANCH" \
               --title "$TITLE" \

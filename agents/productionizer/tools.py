@@ -1,10 +1,9 @@
 """
-Tool implementations exposed to the Gemini agent.
+Tool implementations exposed to the Gemini agent -- infraportal edition.
 Three tools: read_file, write_file, run_shell.
-All paths are relative to the microservices/ root.
+All paths are relative to the infraportal/ root.
 """
 
-import os
 import pathlib
 import subprocess
 
@@ -15,29 +14,39 @@ from google.genai import types
 # ---------------------------------------------------------------------------
 
 _PORTFOLIO_ROOT = pathlib.Path(__file__).parent.parent.parent
-MICROSERVICES_ROOT = _PORTFOLIO_ROOT / "microservices"
+INFRAPORTAL_ROOT = _PORTFOLIO_ROOT / "infraportal"
 
 # ---------------------------------------------------------------------------
 # Guard lists
 # ---------------------------------------------------------------------------
 
 _FORBIDDEN_WRITE_SUBSTRINGS = [
-    "auth.rs",
-    "Cargo.toml",
-    "Cargo.lock",
+    "package.json",
+    "package-lock.json",
     ".github/",
+    "node_modules/",
+    "dist/",
+    "tsconfig",
+    "vite.config",
+    "eslint.config",
+    "tailwind.config",
+    "postcss.config",
+    "index.html",
+    "public/",
 ]
 
 _BLOCKED_SHELL_PREFIXES = [
     "git ",
-    "cargo build",
-    "cargo install",
     "rm ",
     "mv ",
     "cp ",
     "curl ",
     "wget ",
     "sudo ",
+    "npm install",
+    "npm run dev",
+    "npm run build",
+    "npx vite",
 ]
 
 
@@ -46,8 +55,8 @@ _BLOCKED_SHELL_PREFIXES = [
 # ---------------------------------------------------------------------------
 
 def read_file(path: str) -> str:
-    """Read a file from the microservices workspace."""
-    target = MICROSERVICES_ROOT / path
+    """Read a file from the infraportal workspace."""
+    target = INFRAPORTAL_ROOT / path
     try:
         return target.read_text(encoding="utf-8")
     except FileNotFoundError:
@@ -56,36 +65,35 @@ def read_file(path: str) -> str:
         return f"ERROR reading {path}: {exc}"
 
 
-def write_file(path: str, content: str, allowed_service: str) -> str:
-    """Write (overwrite) a complete file in the microservices workspace.
+def write_file(path: str, content: str, allowed_file: str) -> str:
+    """Write (overwrite) the assigned page file in the infraportal workspace.
 
     Guards:
-    - Forbidden path substrings (auth.rs, Cargo.toml, etc.)
-    - Must be within allowed_service/ directory or tests/ directory
+    - Forbidden path substrings (package.json, .github/, etc.)
+    - Must be exactly the allowed_file for this task
     """
     # Guard: forbidden paths
     for forbidden in _FORBIDDEN_WRITE_SUBSTRINGS:
         if forbidden in path:
             return f"ERROR: writes to paths containing '{forbidden}' are forbidden by policy."
 
-    # Guard: must be within the assigned service directory
-    if not (path.startswith(f"{allowed_service}/") or path.startswith("tests/")):
+    # Guard: must be the assigned page file
+    if path != allowed_file:
         return (
-            f"ERROR: writes outside {allowed_service}/ are forbidden for this task. "
+            f"ERROR: only '{allowed_file}' may be written for this task. "
             f"Path given: {path}"
         )
 
-    # Sanitize Unicode "smart quotes" that LLMs sometimes emit.
-    # Rust 2021 treats word"..." as a reserved prefix and rejects the file.
+    # Sanitize Unicode smart quotes that LLMs sometimes emit.
     content = (
         content
-        .replace("\u201c", '"')   # LEFT DOUBLE QUOTATION MARK
-        .replace("\u201d", '"')   # RIGHT DOUBLE QUOTATION MARK
-        .replace("\u2018", "'")   # LEFT SINGLE QUOTATION MARK
-        .replace("\u2019", "'")   # RIGHT SINGLE QUOTATION MARK
+        .replace("\u201c", '"')
+        .replace("\u201d", '"')
+        .replace("\u2018", "'")
+        .replace("\u2019", "'")
     )
 
-    target = MICROSERVICES_ROOT / path
+    target = INFRAPORTAL_ROOT / path
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8")
@@ -95,7 +103,7 @@ def write_file(path: str, content: str, allowed_service: str) -> str:
 
 
 def run_shell(command: str) -> str:
-    """Run a read-only inspection command inside the microservices/ directory."""
+    """Run an inspection or verification command inside the infraportal/ directory."""
     stripped = command.strip()
     for blocked in _BLOCKED_SHELL_PREFIXES:
         if stripped.startswith(blocked):
@@ -110,13 +118,13 @@ def run_shell(command: str) -> str:
             shell=True,
             capture_output=True,
             text=True,
-            cwd=str(MICROSERVICES_ROOT),
-            timeout=60,
+            cwd=str(INFRAPORTAL_ROOT),
+            timeout=120,
         )
         output = (result.stdout + result.stderr)[:8000]
         return output or "(no output)"
     except subprocess.TimeoutExpired:
-        return "ERROR: command timed out after 60 seconds"
+        return "ERROR: command timed out after 120 seconds"
     except Exception as exc:
         return f"ERROR running shell command: {exc}"
 
@@ -131,8 +139,8 @@ def build_tool_declaration() -> types.Tool:
         types.FunctionDeclaration(
             name="read_file",
             description=(
-                "Read the complete contents of a file in the microservices workspace. "
-                "Paths are relative to the microservices/ root. "
+                "Read the complete contents of a file in the infraportal workspace. "
+                "Paths are relative to the infraportal/ root. "
                 "Always read ALL relevant files before making any writes."
             ),
             parameters_json_schema={
@@ -141,8 +149,8 @@ def build_tool_declaration() -> types.Tool:
                     "path": {
                         "type": "string",
                         "description": (
-                            "Relative path from microservices/ root, e.g. "
-                            "'accounts-service/src/lib/handlers/accounts.rs'"
+                            "Relative path from infraportal/ root, e.g. "
+                            "'src/pages/AuditPage.tsx' or 'src/types.ts'"
                         ),
                     }
                 },
@@ -152,17 +160,17 @@ def build_tool_declaration() -> types.Tool:
         types.FunctionDeclaration(
             name="write_file",
             description=(
-                "Write (overwrite) the COMPLETE contents of a file. "
+                "Write (overwrite) the COMPLETE contents of the assigned page file. "
                 "Always provide the entire file, never a diff or partial content. "
-                "Only write files within the assigned service directory. "
-                "Paths are relative to the microservices/ root."
+                "Only the assigned page file may be written. "
+                "Paths are relative to the infraportal/ root."
             ),
             parameters_json_schema={
                 "type": "object",
                 "properties": {
                     "path": {
                         "type": "string",
-                        "description": "Relative path from microservices/ root.",
+                        "description": "Relative path from infraportal/ root.",
                     },
                     "content": {
                         "type": "string",
@@ -175,16 +183,18 @@ def build_tool_declaration() -> types.Tool:
         types.FunctionDeclaration(
             name="run_shell",
             description=(
-                "Run a read-only shell command inside the microservices/ directory. "
-                "Use ONLY for inspection: grep, ls, cargo check --message-format=short. "
-                "Do NOT use git, rm, mv, cp, curl, or wget."
+                "Run a shell command inside the infraportal/ directory. "
+                "Use for: `npx tsc --noEmit` (type-check all files), "
+                "`npx eslint src/pages/<File>.tsx --max-warnings=0` (lint one file), "
+                "`grep -n 'pattern' src/pages/<File>.tsx` (search). "
+                "Do NOT use git, rm, mv, cp, curl, wget, npm install, or npm run build."
             ),
             parameters_json_schema={
                 "type": "object",
                 "properties": {
                     "command": {
                         "type": "string",
-                        "description": "Shell command to run (read-only operations only).",
+                        "description": "Shell command to run.",
                     }
                 },
                 "required": ["command"],
@@ -193,10 +203,10 @@ def build_tool_declaration() -> types.Tool:
     ])
 
 
-def make_dispatch(allowed_service: str) -> dict:
-    """Return a dispatch dict that closes over allowed_service for write_file."""
+def make_dispatch(allowed_file: str) -> dict:
+    """Return a dispatch dict that closes over allowed_file for write_file."""
     return {
         "read_file": lambda args: read_file(args["path"]),
-        "write_file": lambda args: write_file(args["path"], args["content"], allowed_service),
+        "write_file": lambda args: write_file(args["path"], args["content"], allowed_file),
         "run_shell": lambda args: run_shell(args["command"]),
     }
