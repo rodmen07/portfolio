@@ -114,7 +114,7 @@ jobs:
 
             echo "main push rejected, rebasing and retrying once..."
             if ! git -C infraportal pull --rebase origin main; then
-              echo "WARNING: rebase failed while retrying infraportal/main push. Leaving local commit unpushed."
+              echo "WARNING: rebase failed while retrying infraportal/main push; local commit remains unpushed. Next run will retry, but repeated failures may need manual conflict resolution."
               return 1
             fi
 
@@ -256,7 +256,10 @@ jobs:
             if ! git push; then
               echo "state push rejected, rebasing and retrying once..."
               git pull --rebase origin main
-              git push
+              if ! git push; then
+                echo "ERROR: failed to push state.json after rebase retry."
+                exit 1
+              fi
             fi
           else
             echo "state.json unchanged — nothing to commit."
