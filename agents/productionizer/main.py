@@ -328,6 +328,8 @@ def main() -> None:
         if not ok:
             log.error("tsc --noEmit failed:\n%s", output)
             revert_changes(page)
+            record_completion(state, page, gap)
+            save_state(state)
             sys.exit(EXIT_SKIP)
         log.info("tsc passed")
 
@@ -337,6 +339,8 @@ def main() -> None:
         if not ok:
             log.error("eslint failed:\n%s", output)
             revert_changes(page)
+            record_completion(state, page, gap)
+            save_state(state)
             sys.exit(EXIT_SKIP)
         log.info("eslint passed")
 

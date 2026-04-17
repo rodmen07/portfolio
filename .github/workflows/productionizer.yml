@@ -153,13 +153,14 @@ jobs:
 
               # Update README even on skips to reflect progress
               cd "$GITHUB_WORKSPACE"
+              git -C infraportal checkout main
               python agents/productionizer/update_readme.py && \
                 git -C infraportal add README.md && \
                 (git -C infraportal diff --cached --quiet || \
                   git -C infraportal commit -m "docs: productionizer progress update [skip ci]" && \
                   git -C infraportal push \
                     "https://x-access-token:${GH_TOKEN}@github.com/rodmen07/infraportal.git" \
-                    main:main)
+                    main:main) || true
 
               continue
             fi
