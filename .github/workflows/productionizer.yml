@@ -103,7 +103,7 @@ jobs:
           set +e  # exit codes are handled manually; don't let bash -e kill the loop
           GH_TOKEN=$(printf '%s' "${GH_TOKEN}" | tr -d '\n\r')
           OUTPUT=agents/productionizer/.productionizer-output.json
-          MAX_OPEN_PRS=20
+          MAX_OPEN_PRS=25
 
           # Verify PAT can reach infraportal repo before starting the loop
           gh repo view rodmen07/infraportal --json name,visibility

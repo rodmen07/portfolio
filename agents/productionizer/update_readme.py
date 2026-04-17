@@ -117,7 +117,7 @@ def build_progress_section(state: dict) -> str:
         f"### Stop conditions\n\n"
         f"The agent pauses automatically when:\n"
         f"- ⏱ The configured time window (15 / 30 / 45 / 60 min) is exhausted\n"
-        f"- ⚠️ 5 or more open PRs are awaiting review\n"
+        f"- ⚠️ 25 or more open PRs are awaiting review\n"
         f"- ❌ An unrecoverable error occurs\n\n"
         f"### Last run\n\n"
         f"{last_run}\n\n"
