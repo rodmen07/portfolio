@@ -1,27 +1,27 @@
 """
-Task catalog for the productionizer agent — infraportal edition.
+Task catalog for the productionizer agent — infraportal UI/UX edition.
 Target: rodmen07/infraportal (React 19 / TypeScript strict / Vite 5 / Tailwind CSS)
-30 tasks total: 10 pages × 3 gap types, iterated gap-first.
+30 tasks total: 10 pages × 3 UI/UX gap types, iterated gap-first.
 """
 
 PAGES = [
     "PortalPage",         # src/pages/PortalPage.tsx       — main task portal (~34KB)
     "CrmAdminPage",       # src/pages/CrmAdminPage.tsx     — CRM admin (~94KB)
-    "AuditPage",          # src/pages/AuditPage.tsx        — audit log
+    "AuditPage",          # src/pages/AuditPage.tsx        — audit log viewer
     "ReportsPage",        # src/pages/ReportsPage.tsx      — reports dashboard
     "ObservaboardPage",   # src/pages/ObservaboardPage.tsx — observability metrics
-    "SearchPage",         # src/pages/SearchPage.tsx       — global search
-    "ServiceHealthPage",  # src/pages/ServiceHealthPage.tsx — service health
-    "UserDashboardPage",  # src/pages/UserDashboardPage.tsx — user dashboard
+    "SearchPage",         # src/pages/SearchPage.tsx       — cross-domain search
+    "ServiceHealthPage",  # src/pages/ServiceHealthPage.tsx — service health monitor
+    "UserDashboardPage",  # src/pages/UserDashboardPage.tsx — user/admin dashboard
     "PortalLoginPage",    # src/pages/PortalLoginPage.tsx  — login form
-    "ContactPage",        # src/pages/ContactPage.tsx      — contact form
+    "ContactPage",        # src/pages/ContactPage.tsx      — contact/demo form
 ]
 
-# Gap IDs in priority order (highest impact first)
+# Gap IDs in priority order (highest visual impact first)
 GAPS = [
-    "aria-labels",        # Add aria-label to icon-only buttons and unlabelled inputs
-    "keyboard-nav",       # Add keyboard handlers to clickable non-button divs/spans
-    "typed-interfaces",   # Extract implicit types into named TypeScript interfaces
+    "loading-skeleton",   # Replace text spinners with layout-matching skeleton screens
+    "empty-state",        # Replace bare "no data" text with designed empty state UI
+    "error-ux",           # Replace inline error text with structured error cards + retry
 ]
 
 

@@ -12,7 +12,7 @@ on:
         required: false
         default: ""
       force_gap:
-        description: "Gap to fix (aria-labels | keyboard-nav | typed-interfaces). Leave blank for auto-select."
+        description: "Gap to fix (loading-skeleton | empty-state | error-ux). Leave blank for auto-select."
         required: false
         default: ""
 
