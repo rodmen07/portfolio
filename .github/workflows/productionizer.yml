@@ -157,7 +157,9 @@ jobs:
               cd "$GITHUB_WORKSPACE"
               git -C infraportal fetch origin main
               git -C infraportal checkout main
-              git -C infraportal pull --rebase origin main || true
+              if ! git -C infraportal pull --rebase origin main; then
+                echo "WARNING: failed to rebase infraportal/main before README update (skip path)."
+              fi
               python agents/productionizer/update_readme.py && \
                 git -C infraportal add README.md && \
                 (git -C infraportal diff --cached --quiet || \
@@ -206,7 +208,9 @@ jobs:
             echo "Updating infraportal README..."
             git -C infraportal fetch origin main
             git -C infraportal checkout main
-            git -C infraportal pull --rebase origin main || true
+            if ! git -C infraportal pull --rebase origin main; then
+              echo "WARNING: failed to rebase infraportal/main before README update."
+            fi
             python agents/productionizer/update_readme.py
             git -C infraportal add README.md
             if ! git -C infraportal diff --cached --quiet; then
@@ -235,7 +239,10 @@ jobs:
         run: |
           cd "$GITHUB_WORKSPACE"
           git fetch origin main
-          git pull --rebase origin main
+          if ! git pull --rebase origin main; then
+            echo "ERROR: failed to rebase portfolio/main before persisting state.json."
+            exit 1
+          fi
           if ! git diff --quiet agents/productionizer/state.json; then
             git add agents/productionizer/state.json
             git commit -m "chore(productionizer): update agent state [skip ci]"
