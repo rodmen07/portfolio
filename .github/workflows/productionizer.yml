@@ -155,14 +155,21 @@ jobs:
 
               # Update README even on skips to reflect progress
               cd "$GITHUB_WORKSPACE"
+              git -C infraportal fetch origin main
               git -C infraportal checkout main
+              git -C infraportal pull --rebase origin main || true
               python agents/productionizer/update_readme.py && \
                 git -C infraportal add README.md && \
                 (git -C infraportal diff --cached --quiet || \
                   git -C infraportal commit -m "docs: productionizer progress update [skip ci]" && \
-                  git -C infraportal push \
+                  (git -C infraportal push \
                     "https://x-access-token:${GH_TOKEN}@github.com/rodmen07/infraportal.git" \
-                    main:main) || true
+                    main:main || \
+                   (echo "main push rejected, rebasing and retrying once..." && \
+                    git -C infraportal pull --rebase origin main && \
+                    git -C infraportal push \
+                      "https://x-access-token:${GH_TOKEN}@github.com/rodmen07/infraportal.git" \
+                      main:main))) || true
 
               continue
             fi
@@ -199,13 +206,20 @@ jobs:
             echo "Updating infraportal README..."
             git -C infraportal fetch origin main
             git -C infraportal checkout main
+            git -C infraportal pull --rebase origin main || true
             python agents/productionizer/update_readme.py
             git -C infraportal add README.md
             if ! git -C infraportal diff --cached --quiet; then
               git -C infraportal commit -m "docs: productionizer progress update [skip ci]"
-              git -C infraportal push \
+              if ! git -C infraportal push \
                 "https://x-access-token:${GH_TOKEN}@github.com/rodmen07/infraportal.git" \
-                main:main
+                main:main; then
+                echo "main push rejected, rebasing and retrying once..."
+                git -C infraportal pull --rebase origin main
+                git -C infraportal push \
+                  "https://x-access-token:${GH_TOKEN}@github.com/rodmen07/infraportal.git" \
+                  main:main
+              fi
               echo "README updated and pushed."
             else
               echo "README unchanged."
@@ -220,10 +234,16 @@ jobs:
         if: always()
         run: |
           cd "$GITHUB_WORKSPACE"
+          git fetch origin main
+          git pull --rebase origin main
           if ! git diff --quiet agents/productionizer/state.json; then
             git add agents/productionizer/state.json
             git commit -m "chore(productionizer): update agent state [skip ci]"
-            git push
+            if ! git push; then
+              echo "state push rejected, rebasing and retrying once..."
+              git pull --rebase origin main
+              git push
+            fi
           else
             echo "state.json unchanged — nothing to commit."
           fi
