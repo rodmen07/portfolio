@@ -1,1 +1,30 @@
-{"completed": [], "last_run": null, "last_pr": null}
+{
+  "completed": [
+    [
+      "PortalPage",
+      "loading-skeleton"
+    ],
+    [
+      "CrmAdminPage",
+      "loading-skeleton"
+    ],
+    [
+      "AuditPage",
+      "loading-skeleton"
+    ]
+  ],
+  "last_run": "2026-04-17T12:57:04.371360+00:00",
+  "last_pr": null,
+  "recent_summaries": [
+    {
+      "page": "PortalPage",
+      "gap": "loading-skeleton",
+      "summary": "PortalPage: replaced the generic loading spinner with a comprehensive PageSkeleton, composed of several section-specific skeleton components, to provide a structured preview of the page layout during loading. An existing `react-hooks/purity` ESLint error was also resolved by managing `Date.now()` with a `currentLoadTimestamp` state for stable \"days left\" calculation."
+    },
+    {
+      "page": "AuditPage",
+      "gap": "loading-skeleton",
+      "summary": "AuditPage: replaced `Spinner` with `AuditTableSkeleton` and `TableRowSkeleton` components \u2014 matches table layout including summary row, eliminates layout shift."
+    }
+  ]
+}
