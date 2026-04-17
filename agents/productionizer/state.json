@@ -1,61 +1,314 @@
 {
   "completed": [
-    ["accounts-service", "structured-logging"],
-    ["activities-service", "structured-logging"],
-    ["audit-service", "structured-logging"],
-    ["automation-service", "structured-logging"],
-    ["contacts-service", "structured-logging"],
-    ["integrations-service", "structured-logging"],
-    ["opportunities-service", "structured-logging"],
-    ["projects-service", "structured-logging"],
-    ["reporting-service", "structured-logging"],
-    ["search-service", "structured-logging"],
-    ["spend-service", "structured-logging"],
-    ["accounts-service", "dynamic-health"],
-    ["activities-service", "dynamic-health"],
-    ["audit-service", "dynamic-health"],
-    ["automation-service", "dynamic-health"],
-    ["contacts-service", "dynamic-health"],
-    ["integrations-service", "dynamic-health"],
-    ["opportunities-service", "dynamic-health"],
-    ["projects-service", "dynamic-health"],
-    ["reporting-service", "dynamic-health"],
-    ["search-service", "dynamic-health"],
-    ["spend-service", "dynamic-health"],
-    ["accounts-service", "error-details"],
-    ["activities-service", "error-details"],
-    ["audit-service", "error-details"],
-    ["automation-service", "error-details"],
-    ["contacts-service", "error-details"],
-    ["integrations-service", "error-details"],
-    ["opportunities-service", "error-details"],
-    ["projects-service", "error-details"],
-    ["reporting-service", "error-details"],
-    ["search-service", "error-details"],
-    ["spend-service", "error-details"],
-    ["accounts-service", "audit-error-handling"],
-    ["activities-service", "audit-error-handling"],
-    ["audit-service", "audit-error-handling"],
-    ["automation-service", "audit-error-handling"],
-    ["contacts-service", "audit-error-handling"],
-    ["integrations-service", "audit-error-handling"],
-    ["opportunities-service", "audit-error-handling"],
-    ["projects-service", "audit-error-handling"],
-    ["reporting-service", "audit-error-handling"],
-    ["search-service", "audit-error-handling"],
-    ["spend-service", "audit-error-handling"],
-    ["accounts-service", "error-path-tests"],
-    ["activities-service", "error-path-tests"],
-    ["audit-service", "error-path-tests"],
-    ["automation-service", "error-path-tests"],
-    ["contacts-service", "error-path-tests"],
-    ["integrations-service", "error-path-tests"],
-    ["opportunities-service", "error-path-tests"],
-    ["projects-service", "error-path-tests"],
-    ["reporting-service", "error-path-tests"],
-    ["search-service", "error-path-tests"],
-    ["spend-service", "error-path-tests"]
+    [
+      "accounts-service",
+      "structured-logging"
+    ],
+    [
+      "activities-service",
+      "structured-logging"
+    ],
+    [
+      "audit-service",
+      "structured-logging"
+    ],
+    [
+      "automation-service",
+      "structured-logging"
+    ],
+    [
+      "contacts-service",
+      "structured-logging"
+    ],
+    [
+      "integrations-service",
+      "structured-logging"
+    ],
+    [
+      "opportunities-service",
+      "structured-logging"
+    ],
+    [
+      "projects-service",
+      "structured-logging"
+    ],
+    [
+      "reporting-service",
+      "structured-logging"
+    ],
+    [
+      "search-service",
+      "structured-logging"
+    ],
+    [
+      "spend-service",
+      "structured-logging"
+    ],
+    [
+      "accounts-service",
+      "dynamic-health"
+    ],
+    [
+      "activities-service",
+      "dynamic-health"
+    ],
+    [
+      "audit-service",
+      "dynamic-health"
+    ],
+    [
+      "automation-service",
+      "dynamic-health"
+    ],
+    [
+      "contacts-service",
+      "dynamic-health"
+    ],
+    [
+      "integrations-service",
+      "dynamic-health"
+    ],
+    [
+      "opportunities-service",
+      "dynamic-health"
+    ],
+    [
+      "projects-service",
+      "dynamic-health"
+    ],
+    [
+      "reporting-service",
+      "dynamic-health"
+    ],
+    [
+      "search-service",
+      "dynamic-health"
+    ],
+    [
+      "spend-service",
+      "dynamic-health"
+    ],
+    [
+      "accounts-service",
+      "error-details"
+    ],
+    [
+      "activities-service",
+      "error-details"
+    ],
+    [
+      "audit-service",
+      "error-details"
+    ],
+    [
+      "automation-service",
+      "error-details"
+    ],
+    [
+      "contacts-service",
+      "error-details"
+    ],
+    [
+      "integrations-service",
+      "error-details"
+    ],
+    [
+      "opportunities-service",
+      "error-details"
+    ],
+    [
+      "projects-service",
+      "error-details"
+    ],
+    [
+      "reporting-service",
+      "error-details"
+    ],
+    [
+      "search-service",
+      "error-details"
+    ],
+    [
+      "spend-service",
+      "error-details"
+    ],
+    [
+      "accounts-service",
+      "audit-error-handling"
+    ],
+    [
+      "activities-service",
+      "audit-error-handling"
+    ],
+    [
+      "audit-service",
+      "audit-error-handling"
+    ],
+    [
+      "automation-service",
+      "audit-error-handling"
+    ],
+    [
+      "contacts-service",
+      "audit-error-handling"
+    ],
+    [
+      "integrations-service",
+      "audit-error-handling"
+    ],
+    [
+      "opportunities-service",
+      "audit-error-handling"
+    ],
+    [
+      "projects-service",
+      "audit-error-handling"
+    ],
+    [
+      "reporting-service",
+      "audit-error-handling"
+    ],
+    [
+      "search-service",
+      "audit-error-handling"
+    ],
+    [
+      "spend-service",
+      "audit-error-handling"
+    ],
+    [
+      "accounts-service",
+      "error-path-tests"
+    ],
+    [
+      "activities-service",
+      "error-path-tests"
+    ],
+    [
+      "audit-service",
+      "error-path-tests"
+    ],
+    [
+      "automation-service",
+      "error-path-tests"
+    ],
+    [
+      "contacts-service",
+      "error-path-tests"
+    ],
+    [
+      "integrations-service",
+      "error-path-tests"
+    ],
+    [
+      "opportunities-service",
+      "error-path-tests"
+    ],
+    [
+      "projects-service",
+      "error-path-tests"
+    ],
+    [
+      "reporting-service",
+      "error-path-tests"
+    ],
+    [
+      "search-service",
+      "error-path-tests"
+    ],
+    [
+      "spend-service",
+      "error-path-tests"
+    ],
+    [
+      "accounts-service",
+      "unwrap-elimination"
+    ],
+    [
+      "activities-service",
+      "unwrap-elimination"
+    ],
+    [
+      "audit-service",
+      "unwrap-elimination"
+    ],
+    [
+      "automation-service",
+      "unwrap-elimination"
+    ],
+    [
+      "contacts-service",
+      "unwrap-elimination"
+    ],
+    [
+      "integrations-service",
+      "unwrap-elimination"
+    ],
+    [
+      "opportunities-service",
+      "unwrap-elimination"
+    ],
+    [
+      "projects-service",
+      "unwrap-elimination"
+    ],
+    [
+      "reporting-service",
+      "unwrap-elimination"
+    ],
+    [
+      "search-service",
+      "unwrap-elimination"
+    ],
+    [
+      "spend-service",
+      "unwrap-elimination"
+    ],
+    [
+      "accounts-service",
+      "input-validation"
+    ],
+    [
+      "activities-service",
+      "input-validation"
+    ],
+    [
+      "audit-service",
+      "input-validation"
+    ],
+    [
+      "automation-service",
+      "input-validation"
+    ],
+    [
+      "contacts-service",
+      "input-validation"
+    ],
+    [
+      "integrations-service",
+      "input-validation"
+    ],
+    [
+      "opportunities-service",
+      "input-validation"
+    ],
+    [
+      "projects-service",
+      "input-validation"
+    ],
+    [
+      "reporting-service",
+      "input-validation"
+    ],
+    [
+      "search-service",
+      "input-validation"
+    ],
+    [
+      "spend-service",
+      "input-validation"
+    ]
   ],
-  "last_run": "2026-04-13T00:21:08Z",
+  "last_run": "2026-04-15T07:50:24.735078+00:00",
   "last_pr": null
 }

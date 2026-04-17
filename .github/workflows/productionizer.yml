@@ -1,11 +1,9 @@
 name: Productionizer Agent
 
-# Runs daily at 06:00 UTC. Loops through ALL remaining tasks in one run.
-# Can also be triggered manually with optional service/gap overrides.
+# All 55 tasks in the matrix are complete. Schedule trigger removed.
+# Can still be triggered manually with optional service/gap overrides.
 
 on:
-  schedule:
-    - cron: "0 6 * * *"
   workflow_dispatch:
     inputs:
       force_service:
