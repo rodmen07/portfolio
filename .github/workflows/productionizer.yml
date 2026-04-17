@@ -55,8 +55,9 @@ jobs:
         env:
           INFRAPORTAL_PAT: ${{ secrets.INFRAPORTAL_PAT }}
         run: |
+          CLEAN_PAT=$(printf '%s' "${INFRAPORTAL_PAT}" | tr -d '\n\r')
           git clone \
-            "https://x-access-token:${INFRAPORTAL_PAT}@github.com/rodmen07/infraportal.git" \
+            "https://x-access-token:${CLEAN_PAT}@github.com/rodmen07/infraportal.git" \
             infraportal
 
       # ── Toolchains ──────────────────────────────────────────────────────────
@@ -100,6 +101,7 @@ jobs:
           DURATION_MINS:    ${{ inputs.duration_minutes }}
         run: |
           set +e  # exit codes are handled manually; don't let bash -e kill the loop
+          GH_TOKEN=$(printf '%s' "${GH_TOKEN}" | tr -d '\n\r')
           OUTPUT=agents/productionizer/.productionizer-output.json
           MAX_OPEN_PRS=5
 
