@@ -1,12 +1,22 @@
 name: Productionizer Agent
 
-# Repurposed for infraportal (React/TypeScript frontend accessibility improvements).
-# 30 tasks: 10 pages x 3 gap types (aria-labels, keyboard-nav, typed-interfaces).
+# Repurposed for infraportal (React/TypeScript frontend UI/UX improvements).
+# 30 tasks: 10 pages x 3 gap types (loading-skeleton, empty-state, error-ux).
 # Triggered manually only; cron removed since the agent manages its own state loop.
 
 on:
   workflow_dispatch:
     inputs:
+      duration_minutes:
+        description: "How long to run (minutes)"
+        required: false
+        default: "15"
+        type: choice
+        options:
+          - "15"
+          - "30"
+          - "45"
+          - "60"
       force_page:
         description: "Page to target (e.g. AuditPage). Leave blank for auto-select."
         required: false
@@ -24,7 +34,7 @@ jobs:
   productionize:
     name: Productionize all remaining tasks
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 90
     permissions:
       contents: write
 
@@ -76,6 +86,10 @@ jobs:
       #   1 = unrecoverable error; stop
       #   2 = task skipped (no changes needed); continue to next task
       #   3 = all tasks complete; stop
+      #
+      # Stop conditions (besides exit codes):
+      #   - Time window exhausted (DEADLINE reached)
+      #   - Open PRs >= MAX_OPEN_PRS threshold
 
       - name: Run productionizer loop
         env:
@@ -83,9 +97,11 @@ jobs:
           GH_TOKEN:         ${{ secrets.INFRAPORTAL_PAT }}
           FORCE_PAGE:       ${{ inputs.force_page }}
           FORCE_GAP:        ${{ inputs.force_gap }}
+          DURATION_MINS:    ${{ inputs.duration_minutes }}
         run: |
           set +e  # exit codes are handled manually; don't let bash -e kill the loop
           OUTPUT=agents/productionizer/.productionizer-output.json
+          MAX_OPEN_PRS=5
 
           # Verify PAT can reach infraportal repo before starting the loop
           gh repo view rodmen07/infraportal --json name,visibility
@@ -94,7 +110,29 @@ jobs:
             exit 1
           fi
 
+          # Compute deadline
+          DEADLINE=$(( $(date +%s) + ${DURATION_MINS:-15} * 60 ))
+          echo "Time window: ${DURATION_MINS} minutes. Deadline: $(date -d @$DEADLINE)"
+
           while true; do
+            # ── Time check ────────────────────────────────────────────────────
+            NOW=$(date +%s)
+            if [ "$NOW" -ge "$DEADLINE" ]; then
+              echo "Time window (${DURATION_MINS} min) exhausted. Stopping gracefully."
+              break
+            fi
+            REMAINING=$(( ($DEADLINE - $NOW) / 60 ))
+            echo "Time remaining: ${REMAINING} min"
+
+            # ── Open PR guard ─────────────────────────────────────────────────
+            OPEN_PRS=$(gh pr list --repo rodmen07/infraportal --state open --json number --jq 'length')
+            if [ "${OPEN_PRS}" -ge "${MAX_OPEN_PRS}" ]; then
+              echo "Open PRs (${OPEN_PRS}) >= MAX_OPEN_PRS (${MAX_OPEN_PRS}). Pausing until PRs are merged."
+              break
+            fi
+            echo "Open PRs: ${OPEN_PRS} / ${MAX_OPEN_PRS}"
+
+            # ── Run one task ──────────────────────────────────────────────────
             cd "$GITHUB_WORKSPACE/agents/productionizer"
             python main.py
             EXIT_CODE=$?
@@ -112,6 +150,17 @@ jobs:
             if [ $EXIT_CODE -eq 2 ]; then
               echo "Task skipped — continuing to next task."
               rm -f "$GITHUB_WORKSPACE/$OUTPUT"
+
+              # Update README even on skips to reflect progress
+              cd "$GITHUB_WORKSPACE"
+              python agents/productionizer/update_readme.py && \
+                git -C infraportal add README.md && \
+                (git -C infraportal diff --cached --quiet || \
+                  git -C infraportal commit -m "docs: productionizer progress update [skip ci]" && \
+                  git -C infraportal push \
+                    "https://x-access-token:${GH_TOKEN}@github.com/rodmen07/infraportal.git" \
+                    main:main)
+
               continue
             fi
 
@@ -127,7 +176,7 @@ jobs:
             BODY=$(jq   -r '.pr_body'  "$OUTPUT")
 
             echo "Pushing branch: $BRANCH"
-            GIT_CONFIG_GLOBAL=/dev/null git -C infraportal push \
+            git -C infraportal push \
               "https://x-access-token:${GH_TOKEN}@github.com/rodmen07/infraportal.git" \
               "${BRANCH}:${BRANCH}"
 
@@ -140,6 +189,23 @@ jobs:
               --body "$BODY"
 
             rm -f "$OUTPUT"
+
+            # Update infraportal README with latest progress
+            echo "Updating infraportal README..."
+            git -C infraportal fetch origin main
+            git -C infraportal checkout main
+            python agents/productionizer/update_readme.py
+            git -C infraportal add README.md
+            if ! git -C infraportal diff --cached --quiet; then
+              git -C infraportal commit -m "docs: productionizer progress update [skip ci]"
+              git -C infraportal push \
+                "https://x-access-token:${GH_TOKEN}@github.com/rodmen07/infraportal.git" \
+                main:main
+              echo "README updated and pushed."
+            else
+              echo "README unchanged."
+            fi
+
             echo "Task done. Moving to next."
           done
 

@@ -14,7 +14,7 @@ Usage (GitHub Actions sets env vars automatically):
   GOOGLE_API_KEY=...  GH_TOKEN=...  python agents/productionizer/main.py
 
 Optional overrides (for workflow_dispatch manual triggers):
-  FORCE_PAGE=AuditPage  FORCE_GAP=aria-labels
+  FORCE_PAGE=AuditPage  FORCE_GAP=loading-skeleton
 """
 
 from __future__ import annotations
@@ -67,11 +67,24 @@ EXIT_DONE      = 3   # all tasks complete; stop the loop
 def load_state() -> dict:
     if STATE_FILE.exists():
         return json.loads(STATE_FILE.read_text())
-    return {"completed": [], "last_run": None, "last_pr": None}
+    return {"completed": [], "recent_summaries": [], "last_run": None, "last_pr": None}
 
 
 def save_state(state: dict) -> None:
     STATE_FILE.write_text(json.dumps(state, indent=2))
+
+
+def record_completion(
+    state: dict, page: str, gap: str, summary: str | None = None
+) -> None:
+    """Record a completed (page, gap) pair and optionally store its summary."""
+    state.setdefault("completed", []).append([page, gap])
+    state["last_run"] = datetime.datetime.now(datetime.UTC).isoformat()
+    if summary and not summary.upper().startswith("SKIP:"):
+        summaries = state.setdefault("recent_summaries", [])
+        summaries.append({"page": page, "gap": gap, "summary": summary.strip()})
+        if len(summaries) > 10:
+            state["recent_summaries"] = summaries[-10:]
 
 
 # ---------------------------------------------------------------------------
@@ -107,7 +120,7 @@ def commit_changes(page: str, gap: str) -> None:
     git("add", file_path)
     msg = (
         f"fix({page}): productionizer — {gap}\n\n"
-        f"Automated accessibility improvement applied by the productionizer agent.\n"
+        f"Automated UI/UX improvement applied by the productionizer agent.\n"
         f"Gap: {gap}\n"
         f"Page: {page}"
     )
@@ -128,7 +141,7 @@ def write_output(branch: str, page: str, gap: str, summary: str) -> None:
     title = f"fix({page}): {gap} — productionizer"
     body = (
         f"## Summary\n\n"
-        f"Automated productionizer accessibility improvement.\n\n"
+        f"Automated productionizer UI/UX improvement.\n\n"
         f"- **Page**: `{page}`\n"
         f"- **Gap**: `{gap}`\n"
         f"- **Change**: {summary}\n\n"
@@ -279,8 +292,7 @@ def main() -> None:
     existing = git("ls-remote", "--heads", "origin", branch, check=False)
     if existing.stdout.strip():
         log.warning("Branch %s already exists on remote — marking done and continuing", branch)
-        state.setdefault("completed", []).append([page, gap])
-        state["last_run"] = datetime.datetime.now(datetime.UTC).isoformat()
+        record_completion(state, page, gap)
         save_state(state)
         sys.exit(EXIT_SKIP)
 
@@ -295,16 +307,14 @@ def main() -> None:
 
         if not files_changed:
             log.info("Agent made no file changes — marking task done and continuing.")
-            state.setdefault("completed", []).append([page, gap])
-            state["last_run"] = datetime.datetime.now(datetime.UTC).isoformat()
+            record_completion(state, page, gap)
             save_state(state)
             sys.exit(EXIT_SKIP)
 
         if summary and summary.upper().startswith("SKIP:"):
             log.info("Agent reported task already satisfied: %s", summary)
             revert_changes(page)
-            state.setdefault("completed", []).append([page, gap])
-            state["last_run"] = datetime.datetime.now(datetime.UTC).isoformat()
+            record_completion(state, page, gap)
             save_state(state)
             sys.exit(EXIT_SKIP)
 
@@ -333,8 +343,7 @@ def main() -> None:
         commit_changes(page, gap)
         write_output(branch, page, gap, summary)
 
-        state.setdefault("completed", []).append([page, gap])
-        state["last_run"] = datetime.datetime.now(datetime.UTC).isoformat()
+        record_completion(state, page, gap, summary)
         save_state(state)
         log.info("State saved. Total completed: %d", len(state["completed"]))
 
