@@ -105,6 +105,24 @@ jobs:
           OUTPUT=agents/productionizer/.productionizer-output.json
           MAX_OPEN_PRS=25
 
+          push_infraportal_main() {
+            if git -C infraportal push \
+              "https://x-access-token:${GH_TOKEN}@github.com/rodmen07/infraportal.git" \
+              main:main; then
+              return 0
+            fi
+
+            echo "main push rejected, rebasing and retrying once..."
+            if ! git -C infraportal pull --rebase origin main; then
+              echo "WARNING: rebase failed while retrying infraportal/main push; local commit remains unpushed. Next run will retry, but repeated failures may need manual conflict resolution."
+              return 1
+            fi
+
+            git -C infraportal push \
+              "https://x-access-token:${GH_TOKEN}@github.com/rodmen07/infraportal.git" \
+              main:main
+          }
+
           # Verify PAT can reach infraportal repo before starting the loop
           gh repo view rodmen07/infraportal --json name,visibility
           if [ $? -ne 0 ]; then
@@ -155,14 +173,17 @@ jobs:
 
               # Update README even on skips to reflect progress
               cd "$GITHUB_WORKSPACE"
+              git -C infraportal fetch origin main
               git -C infraportal checkout main
+              if ! git -C infraportal pull --rebase origin main; then
+                echo "WARNING: failed to rebase infraportal/main before README update (skip path); continuing with best-effort push."
+              fi
               python agents/productionizer/update_readme.py && \
                 git -C infraportal add README.md && \
                 (git -C infraportal diff --cached --quiet || \
                   git -C infraportal commit -m "docs: productionizer progress update [skip ci]" && \
-                  git -C infraportal push \
-                    "https://x-access-token:${GH_TOKEN}@github.com/rodmen07/infraportal.git" \
-                    main:main) || true
+                  (push_infraportal_main || \
+                   echo "WARNING: failed to push infraportal/main after retry (skip path).")) || true
 
               continue
             fi
@@ -199,13 +220,16 @@ jobs:
             echo "Updating infraportal README..."
             git -C infraportal fetch origin main
             git -C infraportal checkout main
+            if ! git -C infraportal pull --rebase origin main; then
+              echo "WARNING: failed to rebase infraportal/main before README update; continuing with best-effort push."
+            fi
             python agents/productionizer/update_readme.py
             git -C infraportal add README.md
             if ! git -C infraportal diff --cached --quiet; then
               git -C infraportal commit -m "docs: productionizer progress update [skip ci]"
-              git -C infraportal push \
-                "https://x-access-token:${GH_TOKEN}@github.com/rodmen07/infraportal.git" \
-                main:main
+              if ! push_infraportal_main; then
+                echo "WARNING: failed to push infraportal/main after retry."
+              fi
               echo "README updated and pushed."
             else
               echo "README unchanged."
@@ -220,10 +244,23 @@ jobs:
         if: always()
         run: |
           cd "$GITHUB_WORKSPACE"
+          git fetch origin main
+          # This branch must stay rebased before writing state so workflow persistence is deterministic.
+          if ! git pull --rebase origin main; then
+            echo "ERROR: failed to rebase portfolio/main before persisting state.json."
+            exit 1
+          fi
           if ! git diff --quiet agents/productionizer/state.json; then
             git add agents/productionizer/state.json
             git commit -m "chore(productionizer): update agent state [skip ci]"
-            git push
+            if ! git push; then
+              echo "state push rejected, rebasing and retrying once..."
+              git pull --rebase origin main
+              if ! git push; then
+                echo "ERROR: failed to push state.json after rebase retry."
+                exit 1
+              fi
+            fi
           else
             echo "state.json unchanged — nothing to commit."
           fi
