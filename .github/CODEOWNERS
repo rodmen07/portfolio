@@ -1,0 +1,14 @@
+# Default owner for everything in the umbrella repo.
+* @rodmen07
+
+# Workflow and CI changes get extra scrutiny.
+/.github/         @rodmen07
+/.github/workflows/ @rodmen07
+
+# Docs and policy.
+/docs/            @rodmen07
+/SECURITY.md      @rodmen07
+/LICENSE          @rodmen07
+
+# Source-of-truth for service inventory.
+/services.yaml    @rodmen07
