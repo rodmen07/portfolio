@@ -1,0 +1,30 @@
+# Dependabot config for the umbrella repo only. Each submodule has its own
+# Dependabot/Renovate config in its own repo.
+#
+# Here we keep the GitHub Actions used in our umbrella workflows fresh, plus
+# the pip dependencies of the helper scripts under .github/scripts/.
+
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "pip"
+    directory: "/.github/scripts"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"

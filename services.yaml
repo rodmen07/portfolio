@@ -1,0 +1,148 @@
+# Single source of truth for the InfraPortal / Portfolio service inventory.
+#
+# This file is consumed by:
+#   - docs/ARCHITECTURE.md (manually kept in sync; see CONTRIBUTING)
+#   - CI workflows that need to iterate over services
+#   - Future codegen for the README service table
+#
+# Schema (per service):
+#   name:        Repository / service identifier
+#   language:    Primary implementation language / framework
+#   platform:    Where the service is deployed
+#   url:         Public deployment URL (omit for non-public components)
+#   role:        One-line description
+#   submodule:   Path of the git submodule that owns the source (if any)
+
+services:
+  # ---- InfraPortal CRM platform ----
+  - name: task-api-service
+    language: Rust / Axum
+    platform: Fly.io
+    url: https://backend-service-rodmen07-v2.fly.dev
+    role: Core task CRUD, AI planner proxy, audit log
+    submodule: backend-service
+
+  - name: accounts-service
+    language: Rust / Axum
+    platform: GCP Cloud Run
+    url: https://accounts-service-5gcrg4oiza-uc.a.run.app
+    role: Account and tenant domain
+    submodule: microservices
+
+  - name: contacts-service
+    language: Rust / Axum
+    platform: GCP Cloud Run
+    url: https://contacts-service-5gcrg4oiza-uc.a.run.app
+    role: Contact and lead domain, cross-service account validation
+    submodule: microservices
+
+  - name: activities-service
+    language: Rust / Axum
+    platform: GCP Cloud Run
+    url: https://activities-service-5gcrg4oiza-uc.a.run.app
+    role: Activity tracking
+    submodule: microservices
+
+  - name: automation-service
+    language: Rust / Axum
+    platform: GCP Cloud Run
+    url: https://automation-service-5gcrg4oiza-uc.a.run.app
+    role: Automation rules
+    submodule: microservices
+
+  - name: integrations-service
+    language: Rust / Axum
+    platform: GCP Cloud Run
+    url: https://integrations-service-5gcrg4oiza-uc.a.run.app
+    role: Third-party integration hooks
+    submodule: microservices
+
+  - name: opportunities-service
+    language: Rust / Axum
+    platform: GCP Cloud Run
+    url: https://opportunities-service-5gcrg4oiza-uc.a.run.app
+    role: Sales opportunity domain
+    submodule: microservices
+
+  - name: reporting-service
+    language: Rust / Axum
+    platform: GCP Cloud Run
+    url: https://reporting-service-5gcrg4oiza-uc.a.run.app
+    role: Aggregated reports
+    submodule: microservices
+
+  - name: search-service
+    language: Rust / Axum
+    platform: GCP Cloud Run
+    url: https://search-service-5gcrg4oiza-uc.a.run.app
+    role: Cross-domain search
+    submodule: microservices
+
+  - name: audit-service
+    language: Rust / Axum
+    platform: GCP Cloud Run
+    role: Immutable CRM mutation log (v1.2.2)
+    submodule: microservices
+
+  - name: projects-service
+    language: Rust / Axum
+    platform: GCP Cloud Run
+    url: https://projects-service-5gcrg4oiza-uc.a.run.app
+    role: Client portal — projects, milestones, deliverables
+    submodule: projects-service
+
+  - name: ai-orchestrator-service
+    language: Python / FastAPI
+    platform: Fly.io
+    url: https://ai-orchestrator-service-rodmen07.fly.dev
+    role: LLM-backed goal-to-task planner (Claude + Gemini)
+    submodule: ai-orchestrator-service
+
+  - name: auth-service
+    language: Python / FastAPI
+    platform: GCP Cloud Run
+    url: https://auth-service-5gcrg4oiza-uc.a.run.app
+    role: JWT issuance, GitHub + Google OAuth
+    submodule: auth-service
+
+  - name: event-stream-service
+    language: Go
+    platform: Fly.io
+    url: https://event-stream-service.fly.dev
+    role: SSE hub — real-time event fan-out with ring buffer replay
+    submodule: event-stream-service
+
+  - name: go-gateway
+    language: Go
+    platform: GCP Cloud Run
+    url: https://go-gateway-5gcrg4oiza-uc.a.run.app
+    role: API gateway — rate limiting, reverse proxy
+    submodule: go-gateway
+
+  - name: infraportal
+    language: React 19 / Vite / TypeScript
+    platform: GitHub Pages
+    url: https://rodmen07.github.io/infraportal/
+    role: Portfolio site, admin dashboard, client portal
+    submodule: infraportal
+
+  # ---- Standalone projects ----
+  - name: observaboard
+    language: Django 5 / DRF
+    platform: Fly.io
+    url: https://observaboard-rodmen07.fly.dev
+    role: Webhook ingestion, Celery classification, FTS search
+    submodule: observaboard
+
+  - name: dynamodb-dashboard
+    language: Rust / Axum
+    platform: Fly.io
+    url: https://dynamodb-dashboard-rodmen07.fly.dev
+    role: DynamoDB medallion pipeline inspection UI
+    submodule: dynamodb_prototype
+
+  - name: go-pipeline-monitor
+    language: Go
+    platform: Fly.io
+    role: DynamoDB pipeline stage counts + upstream health checks
+    submodule: dynamodb_prototype

@@ -25,3 +25,8 @@ Thumbs.db
 # Claude Code local settings
 .claude/settings.local.json
 *.tmp
+
+# Local environment overrides
+.env
+.env.local
+*.env.local
