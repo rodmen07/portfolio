@@ -84,13 +84,31 @@ def write_file(path: str, content: str, allowed_file: str) -> str:
             f"Path given: {path}"
         )
 
-    # Sanitize Unicode smart quotes that LLMs sometimes emit.
+    # Sanitize Unicode characters that LLMs sometimes emit but TypeScript rejects.
     content = (
         content
-        .replace("\u201c", '"')
-        .replace("\u201d", '"')
-        .replace("\u2018", "'")
-        .replace("\u2019", "'")
+        # Curly / smart quotes → ASCII equivalents
+        .replace("\u201c", '"')   # left double quotation mark  "
+        .replace("\u201d", '"')   # right double quotation mark "
+        .replace("\u2018", "'")   # left single quotation mark  '
+        .replace("\u2019", "'")   # right single quotation mark '
+        # Guillemets
+        .replace("\u00ab", '"')   # left-pointing double angle «
+        .replace("\u00bb", '"')   # right-pointing double angle »
+        .replace("\u2039", "'")   # single left-pointing angle  ‹
+        .replace("\u203a", "'")   # single right-pointing angle ›
+        # Dashes → ASCII hyphen
+        .replace("\u2013", "-")   # en dash –
+        .replace("\u2014", "-")   # em dash —
+        # Ellipsis → three dots
+        .replace("\u2026", "...")  # horizontal ellipsis …
+        # Non-breaking space → regular space
+        .replace("\u00a0", " ")   # no-break space
+        # Zero-width characters → remove entirely
+        .replace("\u200b", "")    # zero width space
+        .replace("\u200c", "")    # zero width non-joiner
+        .replace("\u200d", "")    # zero width joiner
+        .replace("\ufeff", "")    # BOM / zero width no-break space
     )
 
     target = INFRAPORTAL_ROOT / path
