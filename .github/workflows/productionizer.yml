@@ -245,10 +245,33 @@ jobs:
         run: |
           cd "$GITHUB_WORKSPACE"
           git fetch origin main
+          # The productionizer loop may leave unstaged changes (e.g. state.json) in the
+          # workspace. `git pull --rebase` refuses to run with a dirty working tree, so
+          # stash any local changes first and restore them after the rebase.
+          STASHED=0
+          if ! git diff --quiet \
+              || ! git diff --cached --quiet \
+              || [ -n "$(git ls-files --others --exclude-standard)" ]; then
+            if git stash push --include-untracked --message "productionizer-state-autostash" >/dev/null; then
+              STASHED=1
+            else
+              echo "ERROR: failed to stash local changes before rebasing portfolio/main."
+              exit 1
+            fi
+          fi
           # This branch must stay rebased before writing state so workflow persistence is deterministic.
           if ! git pull --rebase origin main; then
             echo "ERROR: failed to rebase portfolio/main before persisting state.json."
+            if [ "$STASHED" -eq 1 ]; then
+              git stash pop || echo "WARNING: failed to restore stashed changes after rebase failure."
+            fi
             exit 1
+          fi
+          if [ "$STASHED" -eq 1 ]; then
+            if ! git stash pop; then
+              echo "ERROR: failed to restore stashed changes after rebasing portfolio/main."
+              exit 1
+            fi
           fi
           if ! git diff --quiet agents/productionizer/state.json; then
             git add agents/productionizer/state.json
