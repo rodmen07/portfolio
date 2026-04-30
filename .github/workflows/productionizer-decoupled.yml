@@ -1,0 +1,142 @@
+name: Productionizer Agent (Decoupled)
+
+# Autonomous UI/UX improvement agent for infraportal (React/TypeScript frontend).
+# 30 tasks: 10 pages × 3 UI/UX gap types (loading-skeleton, empty-state, error-ux).
+# 
+# This decoupled version runs through ALL remaining tasks in a single invocation
+# (no time limits). Use workflow_dispatch with optional force parameters.
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_page:
+        description: "Optional: page to target (e.g. AuditPage). Leave blank for auto-select."
+        required: false
+        default: ""
+      force_gap:
+        description: "Optional: gap to fix (loading-skeleton | empty-state | error-ux). Leave blank for auto-select."
+        required: false
+        default: ""
+
+concurrency:
+  group: productionizer
+  cancel-in-progress: false
+
+jobs:
+  productionize:
+    name: Productionizer (Full Loop)
+    runs-on: ubuntu-latest
+    timeout-minutes: 180  # 3 hours for full 30 tasks
+    permissions:
+      contents: write
+
+    steps:
+      # ── Checkout ────────────────────────────────────────────────────────────
+
+      - name: Checkout portfolio repo
+        uses: actions/checkout@v6
+        with:
+          submodules: false
+
+      - name: Configure git identity
+        run: |
+          git config --global user.name  "productionizer-bot"
+          git config --global user.email "productionizer@users.noreply.github.com"
+
+      - name: Clone infraportal
+        env:
+          INFRAPORTAL_PAT: ${{ secrets.INFRAPORTAL_PAT }}
+        run: |
+          CLEAN_PAT=$(printf '%s' "${INFRAPORTAL_PAT}" | tr -d '\n\r')
+          git clone \
+            "https://x-access-token:${CLEAN_PAT}@github.com/rodmen07/infraportal.git" \
+            infraportal
+
+      # ── Toolchains ──────────────────────────────────────────────────────────
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: infraportal/package-lock.json
+
+      - name: Install infraportal dependencies
+        run: npm ci
+        working-directory: infraportal
+
+      - name: Install agent Python dependencies
+        run: pip install "google-genai>=1.0.0"
+
+      # ── Main loop ───────────────────────────────────────────────────────────
+      # New: Decoupled runner handles full task loop without time limits.
+      # Single exit code: 0 = success (some tasks completed), 1 = error
+
+      - name: Run productionizer (full loop)
+        env:
+          GOOGLE_API_KEY:   ${{ secrets.GOOGLE_API_KEY }}
+          INFRAPORTAL_PAT:  ${{ secrets.INFRAPORTAL_PAT }}
+          FORCE_PAGE:       ${{ inputs.force_page }}
+          FORCE_GAP:        ${{ inputs.force_gap }}
+        run: |
+          cd agents/productionizer
+          python runner.py
+
+      # ── State persistence ───────────────────────────────────────────────────
+
+      - name: Commit updated agent state
+        if: always()
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          git fetch origin main
+          
+          # Stash local changes before rebase
+          STASHED=0
+          if ! git diff --quiet \
+              || ! git diff --cached --quiet \
+              || [ -n "$(git ls-files --others --exclude-standard)" ]; then
+            if git stash push --include-untracked --message "productionizer-state-autostash" >/dev/null; then
+              STASHED=1
+            else
+              echo "ERROR: failed to stash local changes before rebasing portfolio/main."
+              exit 1
+            fi
+          fi
+          
+          # Rebase and restore
+          if ! git pull --rebase origin main; then
+            echo "ERROR: failed to rebase portfolio/main before persisting state.json."
+            if [ "$STASHED" -eq 1 ]; then
+              git stash pop || echo "WARNING: failed to restore stashed changes after rebase failure."
+            fi
+            exit 1
+          fi
+          
+          if [ "$STASHED" -eq 1 ]; then
+            if ! git stash pop; then
+              echo "ERROR: failed to restore stashed changes after rebasing portfolio/main."
+              exit 1
+            fi
+          fi
+          
+          # Commit and push state changes
+          if ! git diff --quiet agents/productionizer/state.json; then
+            git add agents/productionizer/state.json
+            git commit -m "chore(productionizer): update agent state [skip ci]"
+            
+            if ! git push; then
+              echo "state push rejected, rebasing and retrying once..."
+              git pull --rebase origin main
+              if ! git push; then
+                echo "ERROR: failed to push state.json after rebase retry."
+                exit 1
+              fi
+            fi
+          else
+            echo "state.json unchanged — nothing to commit."
+          fi

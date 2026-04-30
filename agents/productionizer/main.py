@@ -1,20 +1,29 @@
 """
-Productionizer agent — main orchestration loop — infraportal edition.
+Productionizer agent — single task execution (decoupled from workflows).
 
-Each run:
+Each invocation processes ONE task:
   1. Load state (which page/gap combinations are done)
-  2. Pick the next (page, gap) task
+  2. Pick the next (page, gap) task (or use FORCE_PAGE/FORCE_GAP)
   3. Create a git branch in the infraportal/ clone
   4. Run the Gemini agentic loop (reads/writes files via tools)
   5. Verify: npx tsc --noEmit + npx eslint
-  6. On success: commit, push branch, open a PR against rodmen07/infraportal
+  6. On success: commit to branch, write .productionizer-output.json
   7. Save updated state
 
-Usage (GitHub Actions sets env vars automatically):
-  GOOGLE_API_KEY=...  GH_TOKEN=...  python agents/productionizer/main.py
+Exit codes:
+  0 = task completed and committed
+  1 = unrecoverable error
+  2 = task skipped (no changes or verification failed)
+  3 = all tasks complete
 
-Optional overrides (for workflow_dispatch manual triggers):
+Usage (invoke multiple times or via runner.py):
+  GOOGLE_API_KEY=...  python agents/productionizer/main.py
+
+Optional overrides:
   FORCE_PAGE=AuditPage  FORCE_GAP=loading-skeleton
+
+For full-loop execution without GitHub Actions, use runner.py instead:
+  GOOGLE_API_KEY=...  INFRAPORTAL_PAT=...  python runner.py
 """
 
 from __future__ import annotations
