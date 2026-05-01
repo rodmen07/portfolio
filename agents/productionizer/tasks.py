@@ -1,47 +1,86 @@
 """
-Task catalog for the productionizer agent — infraportal UI/UX edition.
-Target: rodmen07/infraportal (React 19 / TypeScript strict / Vite 5 / Tailwind CSS)
-30 tasks total: 10 pages × 3 UI/UX gap types, iterated gap-first.
+Task model and backlog management for the fullstack productionizer.
 """
+from __future__ import annotations
 
-PAGES = [
-    "PortalPage",         # src/pages/PortalPage.tsx       — main task portal (~34KB)
-    "CrmAdminPage",       # src/pages/CrmAdminPage.tsx     — CRM admin (~94KB)
-    "AuditPage",          # src/pages/AuditPage.tsx        — audit log viewer
-    "ReportsPage",        # src/pages/ReportsPage.tsx      — reports dashboard
-    "ObservaboardPage",   # src/pages/ObservaboardPage.tsx — observability metrics
-    "SearchPage",         # src/pages/SearchPage.tsx       — cross-domain search
-    "ServiceHealthPage",  # src/pages/ServiceHealthPage.tsx — service health monitor
-    "UserDashboardPage",  # src/pages/UserDashboardPage.tsx — user/admin dashboard
-    "PortalLoginPage",    # src/pages/PortalLoginPage.tsx  — login form
-    "ContactPage",        # src/pages/ContactPage.tsx      — contact/demo form
-]
+import pathlib
+from dataclasses import dataclass
+from typing import Literal
 
-# Gap IDs in priority order (highest visual impact first)
-GAPS = [
-    "loading-skeleton",   # Replace text spinners with layout-matching skeleton screens
-    "empty-state",        # Replace bare "no data" text with designed empty state UI
-    "error-ux",           # Replace inline error text with structured error cards + retry
-]
+import yaml
+
+AGENT_DIR = pathlib.Path(__file__).parent
+BACKLOG_FILE = AGENT_DIR / "backlog.yaml"
+
+Complexity = Literal["low", "medium", "high"]
+Status = Literal["pending", "in_progress", "done", "skipped"]
 
 
-def build_task_queue() -> list[tuple[str, str]]:
-    """Return all (page, gap) pairs in gap-first priority order."""
-    return [(gap, page) for gap in GAPS for page in PAGES]
+@dataclass
+class Task:
+    id: str
+    dimension: str
+    title: str
+    description: str
+    repos: list[str]
+    complexity: Complexity
+    status: Status = "pending"
+    created_at: str = ""
+    completed_at: str | None = None
+    summary: str | None = None
 
 
-def pick_next_task(state: dict) -> tuple[str, str] | None:
-    """
-    Return the first (page, gap) pair not yet in state['completed'], or None
-    if all 30 tasks are done.
-    """
-    completed = {(page, gap) for page, gap in state.get("completed", [])}
-    for gap, page in build_task_queue():
-        if (page, gap) not in completed:
-            return page, gap
+def load_backlog() -> list[Task]:
+    if not BACKLOG_FILE.exists():
+        return []
+    raw = yaml.safe_load(BACKLOG_FILE.read_text()) or {}
+    tasks = []
+    for item in raw.get("tasks", []) or []:
+        tasks.append(Task(
+            id=item["id"],
+            dimension=item["dimension"],
+            title=item["title"],
+            description=item["description"],
+            repos=item["repos"],
+            complexity=item.get("complexity", "medium"),
+            status=item.get("status", "pending"),
+            created_at=item.get("created_at", ""),
+            completed_at=item.get("completed_at"),
+            summary=item.get("summary"),
+        ))
+    return tasks
+
+
+def save_backlog(tasks: list[Task]) -> None:
+    items = []
+    for t in tasks:
+        items.append({
+            "id": t.id,
+            "dimension": t.dimension,
+            "title": t.title,
+            "description": t.description,
+            "repos": t.repos,
+            "complexity": t.complexity,
+            "status": t.status,
+            "created_at": t.created_at,
+            "completed_at": t.completed_at,
+            "summary": t.summary,
+        })
+    BACKLOG_FILE.write_text(
+        yaml.dump({"tasks": items}, default_flow_style=False, allow_unicode=True, sort_keys=False)
+    )
+
+
+def pick_next_task(tasks: list[Task]) -> Task | None:
+    for task in tasks:
+        if task.status == "pending":
+            return task
     return None
 
 
-def file_path_for_page(page: str) -> str:
-    """Return the src-relative file path for a given page component."""
-    return f"src/pages/{page}.tsx"
+def pending_count(tasks: list[Task]) -> int:
+    return sum(1 for t in tasks if t.status == "pending")
+
+
+def done_count(tasks: list[Task]) -> int:
+    return sum(1 for t in tasks if t.status == "done")

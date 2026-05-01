@@ -1,0 +1,120 @@
+# Development dimensions for the productionizer fullstack agent.
+# Each dimension defines a strategic area of continuous development.
+#
+# Run `python planner.py` to generate a concrete task backlog from these dimensions.
+# Run `python planner.py --dimension <id>` to regenerate tasks for a single dimension.
+# Run `python planner.py --count 10` to control how many tasks to generate per dimension.
+
+dimensions:
+  - id: frontend-ui-ux
+    name: "Frontend: UI/UX Polish"
+    repos:
+      - infraportal
+    complexity: low
+    description: |
+      Improve the visual quality, interactivity, and user experience of the infraportal
+      React frontend. Make the interface feel polished, fast, and well-considered.
+
+      Focus areas:
+      - Animations and transitions (page transitions, hover effects, micro-interactions,
+        accordion/collapse animations, smooth list item enters/exits)
+      - Loading states (skeleton screens matching content shape, progress indicators)
+      - Empty states (illustrated empty states with helpful CTAs)
+      - Error states (structured error cards with retry, clear messaging)
+      - Navigation improvements (active state clarity, breadcrumbs, keyboard nav)
+      - Component polish (spacing hierarchy, shadow depth, border treatments)
+      - Responsive design (mobile breakpoints, sidebar collapse, touch targets)
+      - Form UX (inline validation, better focus rings, disabled state styling)
+      - Subtle visual feedback (button press states, hover glow, selection highlight)
+
+  - id: frontend-components
+    name: "Frontend: New Components & Features"
+    repos:
+      - infraportal
+    complexity: medium
+    description: |
+      Build new reusable UI components and user-facing features for infraportal.
+      Raise the capability and consistency of the component library.
+
+      Focus areas:
+      - Reusable primitives (badges, status chips, tooltips, popovers, dropdowns)
+      - Data table improvements (column sorting, row selection, inline actions, export)
+      - Dashboard widgets (sparkline charts, donut charts, metric trend indicators)
+      - Command palette or quick-action panel
+      - Toast/notification system polish
+      - Modal and drawer patterns
+      - Keyboard shortcut system
+      - Collapsible sidebar sections with memory (localStorage persist)
+      - Global search UI improvements (recent searches, result grouping, keyboard nav)
+
+  - id: backend-optimization
+    name: "Backend: Optimization & Reliability"
+    repos:
+      - microservices
+      - backend-service
+      - go-gateway
+      - projects-service
+    complexity: medium
+    description: |
+      Optimize and harden existing backend systems across the portfolio microservices.
+      Improve performance, observability, and resilience without changing behavior.
+
+      Focus areas:
+      - Query optimization and targeted database indexing (explain plans, N+1 fixes)
+      - Connection pool configuration and idle timeout tuning
+      - Structured logging improvements (request IDs, correlation spans, durations, error context)
+      - Health check endpoints (detailed /health/ready with DB ping, /health/live)
+      - Timeout policies and graceful shutdown improvements
+      - Rate limiting and backpressure handling
+      - Error response consistency (uniform error shapes across services)
+      - Memory allocation hot-path improvements in Rust services
+      - Middleware improvements (CORS, compression, request size limits)
+      - Test coverage for existing handlers (table-driven tests, error path coverage)
+
+  - id: backend-new-features
+    name: "Backend: New Features & APIs"
+    repos:
+      - microservices
+      - backend-service
+      - go-gateway
+      - auth-service
+      - projects-service
+    complexity: high
+    description: |
+      Implement new functionality across the backend microservices.
+      Extend the API surface and business logic in meaningful ways.
+
+      Focus areas:
+      - Bulk operation endpoints (batch create/update/delete with partial-success responses)
+      - Aggregation and summary endpoints (counts by status, date ranges, user activity)
+      - Pagination improvements (cursor-based pagination replacing offset where appropriate)
+      - Advanced filtering (multi-field filter params, range filters, full-text search params)
+      - Export endpoints (CSV/JSON export with streaming for large datasets)
+      - Webhook support (outbound webhooks on entity changes)
+      - New cross-service relationships (e.g., linking contacts to opportunities to activities)
+      - Soft-delete and restore patterns for entities that currently hard-delete
+      - Audit trail hooks (emit structured events on mutations)
+      - Service-to-service auth improvements (internal JWT or mTLS for inter-service calls)
+
+  - id: fullstack-features
+    name: "Fullstack: End-to-End Features"
+    repos:
+      - infraportal
+      - microservices
+      - backend-service
+    complexity: high
+    description: |
+      Implement complete features that span both frontend and backend layers.
+      Each task should deliver a cohesive, usable capability to the end user.
+
+      Focus areas:
+      - New pages backed by new or underutilized API endpoints
+      - Real-time features using the event-stream-service SSE hub (live status updates,
+        activity feeds, notification banners)
+      - Bulk action flows (multi-select in tables, batch status changes, bulk assignment)
+      - Export/download flows (trigger backend export job, poll for completion, download)
+      - Advanced filter UI wired to backend filter query params (saved filter sets)
+      - Cross-service detail views (e.g., account page aggregating contacts + activities +
+        opportunities in a unified timeline)
+      - Inline editing patterns (click-to-edit fields that PATCH the API)
+      - Drag-and-drop reordering of tasks or pipeline stages

@@ -1,134 +1,95 @@
 """
-Tool implementations exposed to the Gemini agent -- infraportal edition.
-Three tools: read_file, write_file, run_shell.
-All paths are relative to the infraportal/ root.
+Agent tools for the fullstack productionizer — multi-repo, Claude API format.
 """
+from __future__ import annotations
 
 import pathlib
 import subprocess
 
-from google.genai import types
+from repos import REPOS
 
-# ---------------------------------------------------------------------------
-# Workspace root
-# ---------------------------------------------------------------------------
 
-_PORTFOLIO_ROOT = pathlib.Path(__file__).parent.parent.parent
-INFRAPORTAL_ROOT = _PORTFOLIO_ROOT / "infraportal"
-
-# ---------------------------------------------------------------------------
-# Guard lists
-# ---------------------------------------------------------------------------
-
-_FORBIDDEN_WRITE_SUBSTRINGS = [
-    "package.json",
-    "package-lock.json",
-    ".github/",
-    "node_modules/",
-    "dist/",
-    "tsconfig",
-    "vite.config",
-    "eslint.config",
-    "tailwind.config",
-    "postcss.config",
-    "index.html",
-    "public/",
-]
-
-_BLOCKED_SHELL_PREFIXES = [
-    "git ",
-    "rm ",
-    "mv ",
-    "cp ",
-    "curl ",
-    "wget ",
-    "sudo ",
-    "npm install",
-    "npm run dev",
-    "npm run build",
-    "npx vite",
-]
+def _sanitize(content: str) -> str:
+    return (
+        content
+        .replace("“", '"').replace("”", '"')
+        .replace("‘", "'").replace("’", "'")
+        .replace("«", '"').replace("»", '"')
+        .replace("‹", "'").replace("›", "'")
+        .replace("–", "-").replace("—", "-")
+        .replace("…", "...").replace(" ", " ")
+        .replace("​", "").replace("‌", "")
+        .replace("‍", "").replace("﻿", "")
+    )
 
 
 # ---------------------------------------------------------------------------
 # Tool implementations
 # ---------------------------------------------------------------------------
 
-def read_file(path: str) -> str:
-    """Read a file from the infraportal workspace."""
-    target = INFRAPORTAL_ROOT / path
+def read_file(repo: str, path: str) -> str:
+    cfg = REPOS.get(repo)
+    if not cfg:
+        return f"ERROR: unknown repo '{repo}'. Available: {sorted(REPOS)}"
+    target = cfg.path / path
     try:
         return target.read_text(encoding="utf-8")
     except FileNotFoundError:
-        return f"ERROR: file not found: {path}"
+        return f"ERROR: file not found: {repo}/{path}"
     except Exception as exc:
-        return f"ERROR reading {path}: {exc}"
+        return f"ERROR reading {repo}/{path}: {exc}"
 
 
-def write_file(path: str, content: str, allowed_file: str) -> str:
-    """Write (overwrite) the assigned page file in the infraportal workspace.
+def write_file(repo: str, path: str, content: str) -> str:
+    cfg = REPOS.get(repo)
+    if not cfg:
+        return f"ERROR: unknown repo '{repo}'"
 
-    Guards:
-    - Forbidden path substrings (package.json, .github/, etc.)
-    - Must be exactly the allowed_file for this task
-    """
-    # Guard: forbidden paths
-    for forbidden in _FORBIDDEN_WRITE_SUBSTRINGS:
+    for forbidden in cfg.forbidden_write_paths:
         if forbidden in path:
-            return f"ERROR: writes to paths containing '{forbidden}' are forbidden by policy."
+            return f"ERROR: writes to paths containing '{forbidden}' are forbidden in {repo}."
 
-    # Guard: must be the assigned page file
-    if path != allowed_file:
-        return (
-            f"ERROR: only '{allowed_file}' may be written for this task. "
-            f"Path given: {path}"
-        )
+    lower = path.lower()
+    if any(s in lower for s in [".env", "secret", "credential", "id_rsa", "id_ed25519"]):
+        return f"ERROR: writing to '{path}' is forbidden (potential secrets file)."
 
-    # Sanitize Unicode characters that LLMs sometimes emit but TypeScript rejects.
-    content = (
-        content
-        # Curly / smart quotes → ASCII equivalents
-        .replace("\u201c", '"')   # left double quotation mark  "
-        .replace("\u201d", '"')   # right double quotation mark "
-        .replace("\u2018", "'")   # left single quotation mark  '
-        .replace("\u2019", "'")   # right single quotation mark '
-        # Guillemets
-        .replace("\u00ab", '"')   # left-pointing double angle «
-        .replace("\u00bb", '"')   # right-pointing double angle »
-        .replace("\u2039", "'")   # single left-pointing angle  ‹
-        .replace("\u203a", "'")   # single right-pointing angle ›
-        # Dashes → ASCII hyphen
-        .replace("\u2013", "-")   # en dash –
-        .replace("\u2014", "-")   # em dash —
-        # Ellipsis → three dots
-        .replace("\u2026", "...")  # horizontal ellipsis …
-        # Non-breaking space → regular space
-        .replace("\u00a0", " ")   # no-break space
-        # Zero-width characters → remove entirely
-        .replace("\u200b", "")    # zero width space
-        .replace("\u200c", "")    # zero width non-joiner
-        .replace("\u200d", "")    # zero width joiner
-        .replace("\ufeff", "")    # BOM / zero width no-break space
-    )
-
-    target = INFRAPORTAL_ROOT / path
+    content = _sanitize(content)
+    target = cfg.path / path
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8")
-        return f"OK: wrote {len(content)} bytes to {path}"
+        return f"OK: wrote {len(content)} bytes to {repo}/{path}"
     except Exception as exc:
-        return f"ERROR writing {path}: {exc}"
+        return f"ERROR writing {repo}/{path}: {exc}"
 
 
-def run_shell(command: str) -> str:
-    """Run an inspection or verification command inside the infraportal/ directory."""
+def list_files(repo: str, path: str = ".") -> str:
+    cfg = REPOS.get(repo)
+    if not cfg:
+        return f"ERROR: unknown repo '{repo}'"
+    target = cfg.path / path
+    try:
+        entries = sorted(target.iterdir(), key=lambda e: (e.is_file(), e.name))
+        lines = []
+        for e in entries:
+            rel = e.relative_to(cfg.path)
+            lines.append(f"{rel}{'/' if e.is_dir() else ''}")
+        return "\n".join(lines) or "(empty directory)"
+    except FileNotFoundError:
+        return f"ERROR: path not found: {repo}/{path}"
+    except Exception as exc:
+        return f"ERROR listing {repo}/{path}: {exc}"
+
+
+def run_shell(repo: str, command: str) -> str:
+    cfg = REPOS.get(repo)
+    if not cfg:
+        return f"ERROR: unknown repo '{repo}'"
+
     stripped = command.strip()
-    for blocked in _BLOCKED_SHELL_PREFIXES:
+    for blocked in cfg.forbidden_shell_prefixes:
         if stripped.startswith(blocked):
-            return (
-                f"ERROR: '{blocked.strip()}' commands are blocked by policy. "
-                "Use read_file / write_file for file operations."
-            )
+            return f"ERROR: '{blocked.strip()}' commands are blocked in {repo}."
 
     try:
         result = subprocess.run(
@@ -136,95 +97,109 @@ def run_shell(command: str) -> str:
             shell=True,
             capture_output=True,
             text=True,
-            cwd=str(INFRAPORTAL_ROOT),
-            timeout=120,
+            cwd=str(cfg.path),
+            timeout=180,
         )
-        output = (result.stdout + result.stderr)[:8000]
+        output = (result.stdout + result.stderr)[:10_000]
         return output or "(no output)"
     except subprocess.TimeoutExpired:
-        return "ERROR: command timed out after 120 seconds"
+        return "ERROR: command timed out after 180 seconds"
     except Exception as exc:
-        return f"ERROR running shell command: {exc}"
+        return f"ERROR running command: {exc}"
 
 
 # ---------------------------------------------------------------------------
-# Gemini tool definitions (google.genai types)
+# Claude API tool definitions
 # ---------------------------------------------------------------------------
 
-def build_tool_declaration() -> types.Tool:
-    """Return the Gemini Tool describing the three agent tools."""
-    return types.Tool(function_declarations=[
-        types.FunctionDeclaration(
-            name="read_file",
-            description=(
-                "Read the complete contents of a file in the infraportal workspace. "
-                "Paths are relative to the infraportal/ root. "
-                "Always read ALL relevant files before making any writes."
-            ),
-            parameters_json_schema={
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": (
-                            "Relative path from infraportal/ root, e.g. "
-                            "'src/pages/AuditPage.tsx' or 'src/types.ts'"
-                        ),
-                    }
-                },
-                "required": ["path"],
-            },
+TOOL_DEFINITIONS = [
+    {
+        "name": "read_file",
+        "description": (
+            "Read the complete contents of a file from any repo in the portfolio. "
+            "Always read relevant files before making any writes. "
+            "Read related files (types, interfaces, models, routes) for full context."
         ),
-        types.FunctionDeclaration(
-            name="write_file",
-            description=(
-                "Write (overwrite) the COMPLETE contents of the assigned page file. "
-                "Always provide the entire file, never a diff or partial content. "
-                "Only the assigned page file may be written. "
-                "Paths are relative to the infraportal/ root."
-            ),
-            parameters_json_schema={
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Relative path from infraportal/ root.",
-                    },
-                    "content": {
-                        "type": "string",
-                        "description": "Complete file contents to write.",
-                    },
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "repo": {
+                    "type": "string",
+                    "description": f"Repo name. One of: {sorted(REPOS)}",
                 },
-                "required": ["path", "content"],
-            },
-        ),
-        types.FunctionDeclaration(
-            name="run_shell",
-            description=(
-                "Run a shell command inside the infraportal/ directory. "
-                "Use for: `npx tsc --noEmit` (type-check all files), "
-                "`npx eslint src/pages/<File>.tsx --max-warnings=0` (lint one file), "
-                "`grep -n 'pattern' src/pages/<File>.tsx` (search). "
-                "Do NOT use git, rm, mv, cp, curl, wget, npm install, or npm run build."
-            ),
-            parameters_json_schema={
-                "type": "object",
-                "properties": {
-                    "command": {
-                        "type": "string",
-                        "description": "Shell command to run.",
-                    }
+                "path": {
+                    "type": "string",
+                    "description": (
+                        "Path relative to the repo root. "
+                        "e.g. 'src/pages/Dashboard.tsx', 'src/handlers/accounts.rs', 'internal/proxy/proxy.go'"
+                    ),
                 },
-                "required": ["command"],
             },
+            "required": ["repo", "path"],
+        },
+    },
+    {
+        "name": "write_file",
+        "description": (
+            "Write (overwrite) a file in any repo. "
+            "Always provide COMPLETE file contents — never partial diffs, snippets, or "
+            "'rest of file unchanged' placeholders. "
+            "Read the file first if it already exists. "
+            "After writing, verify with run_shell (tsc, cargo check, go build, py_compile)."
         ),
-    ])
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "repo": {"type": "string", "description": "Repo name."},
+                "path": {"type": "string", "description": "Path relative to repo root."},
+                "content": {"type": "string", "description": "Complete file contents."},
+            },
+            "required": ["repo", "path", "content"],
+        },
+    },
+    {
+        "name": "list_files",
+        "description": (
+            "List files and directories at a path within a repo. "
+            "Use to explore codebase structure before reading specific files."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "repo": {"type": "string", "description": "Repo name."},
+                "path": {
+                    "type": "string",
+                    "description": "Directory path relative to repo root. Default: '.' (repo root).",
+                },
+            },
+            "required": ["repo"],
+        },
+    },
+    {
+        "name": "run_shell",
+        "description": (
+            "Run a shell command inside a repo directory. "
+            "Use for verification: 'npx tsc --noEmit', 'cargo check', 'go build ./...', "
+            "'go vet ./...', 'python -m py_compile <file>'. "
+            "Use for exploration: 'grep -rn pattern src/', 'find src -name *.rs', 'cat Cargo.toml'. "
+            "Do NOT use: git, rm, mv, cp, curl, wget, sudo, npm install, pip install, cargo install."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "repo": {"type": "string", "description": "Repo name."},
+                "command": {"type": "string", "description": "Shell command to run."},
+            },
+            "required": ["repo", "command"],
+        },
+    },
+]
 
 
-def make_dispatch(allowed_file: str) -> dict:
-    """Return a dispatch dict that closes over allowed_file for write_file."""
+def make_dispatch() -> dict:
     return {
-        "read_file": lambda args: read_file(args["path"]),
-        "write_file": lambda args: write_file(args["path"], args["content"], allowed_file),
-        "run_shell": lambda args: run_shell(args["command"]),
+        "read_file":  lambda args: read_file(args["repo"], args["path"]),
+        "write_file": lambda args: write_file(args["repo"], args["path"], args["content"]),
+        "list_files": lambda args: list_files(args["repo"], args.get("path", ".")),
+        "run_shell":  lambda args: run_shell(args["repo"], args["command"]),
     }

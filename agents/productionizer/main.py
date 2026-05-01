@@ -1,31 +1,24 @@
 """
-Productionizer agent — single task execution (decoupled from workflows).
+Productionizer agent — single task executor.
 
-Each invocation processes ONE task:
-  1. Load state (which page/gap combinations are done)
-  2. Pick the next (page, gap) task (or use FORCE_PAGE/FORCE_GAP)
-  3. Create a git branch in the infraportal/ clone
-  4. Run the Gemini agentic loop (reads/writes files via tools)
-  5. Verify: npx tsc --noEmit + npx eslint
-  6. On success: commit to branch, write .productionizer-output.json
-  7. Save updated state
+Each invocation:
+  1. Picks the next pending task from backlog.yaml (or uses FORCE_TASK_ID)
+  2. Creates git branches in all affected repos
+  3. Runs the Claude agentic loop (reads/writes files via tools)
+  4. Verifies each affected repo with its language-appropriate verification command
+  5. On success: commits changes, writes .productionizer-output.json
+  6. Updates task status in backlog.yaml
 
 Exit codes:
-  0 = task completed and committed
-  1 = unrecoverable error
-  2 = task skipped (no changes or verification failed)
-  3 = all tasks complete
+  0 = task completed and committed; output file written; push + PR needed
+  1 = unrecoverable error; stop the loop
+  2 = task skipped (no changes or verification failed); continue to next
+  3 = backlog empty; stop the loop
 
-Usage (invoke multiple times or via runner.py):
-  GOOGLE_API_KEY=...  python agents/productionizer/main.py
-
-Optional overrides:
-  FORCE_PAGE=AuditPage  FORCE_GAP=loading-skeleton
-
-For full-loop execution without GitHub Actions, use runner.py instead:
-  GOOGLE_API_KEY=...  INFRAPORTAL_PAT=...  python runner.py
+Usage:
+  ANTHROPIC_API_KEY=...  python main.py
+  ANTHROPIC_API_KEY=...  FORCE_TASK_ID=frontend-ui-ux-abc12345  python main.py
 """
-
 from __future__ import annotations
 
 import datetime
@@ -36,17 +29,12 @@ import pathlib
 import subprocess
 import sys
 
-from google import genai
-from google.genai import errors as genai_errors
-from google.genai import types
+import anthropic
 
-from prompts import SYSTEM_PROMPT, build_task_prompt
-from tasks import build_task_queue, file_path_for_page, pick_next_task
-from tools import INFRAPORTAL_ROOT, build_tool_declaration, make_dispatch
-
-# ---------------------------------------------------------------------------
-# Logging
-# ---------------------------------------------------------------------------
+from prompts import build_system_prompt, build_task_prompt
+from repos import REPOS
+from tasks import Task, load_backlog, save_backlog, pick_next_task
+from tools import TOOL_DEFINITIONS, make_dispatch
 
 logging.basicConfig(
     level=logging.INFO,
@@ -54,224 +42,223 @@ logging.basicConfig(
 )
 log = logging.getLogger("productionizer")
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
+AGENT_DIR = pathlib.Path(__file__).parent
+OUTPUT_FILE = AGENT_DIR / ".productionizer-output.json"
+MAX_TOOL_ROUNDS = 60
 
-STATE_FILE  = pathlib.Path(__file__).parent / "state.json"
-OUTPUT_FILE = pathlib.Path(__file__).parent / ".productionizer-output.json"
-MAX_TOOL_ROUNDS = 25  # safety cap on agent loop iterations
+EXIT_COMMITTED = 0
+EXIT_ERROR     = 1
+EXIT_SKIP      = 2
+EXIT_DONE      = 3
 
-# Exit codes — read by the workflow loop to decide what to do next.
-EXIT_COMMITTED = 0   # task committed; output file written; push + PR needed
-EXIT_ERROR     = 1   # unrecoverable error; stop the loop
-EXIT_SKIP      = 2   # task skipped (no changes needed); continue to next task
-EXIT_DONE      = 3   # all tasks complete; stop the loop
-
-
-# ---------------------------------------------------------------------------
-# State management
-# ---------------------------------------------------------------------------
-
-def load_state() -> dict:
-    if STATE_FILE.exists():
-        return json.loads(STATE_FILE.read_text())
-    return {"completed": [], "recent_summaries": [], "last_run": None, "last_pr": None}
-
-
-def save_state(state: dict) -> None:
-    STATE_FILE.write_text(json.dumps(state, indent=2))
-
-
-def record_completion(
-    state: dict, page: str, gap: str, summary: str | None = None
-) -> None:
-    """Record a completed (page, gap) pair and optionally store its summary."""
-    state.setdefault("completed", []).append([page, gap])
-    state["last_run"] = datetime.datetime.now(datetime.UTC).isoformat()
-    if summary and not summary.upper().startswith("SKIP:"):
-        summaries = state.setdefault("recent_summaries", [])
-        summaries.append({"page": page, "gap": gap, "summary": summary.strip()})
-        if len(summaries) > 10:
-            state["recent_summaries"] = summaries[-10:]
+MODEL_MAP = {
+    "low":    "claude-haiku-4-5-20251001",
+    "medium": "claude-sonnet-4-6",
+    "high":   "claude-opus-4-7",
+}
 
 
 # ---------------------------------------------------------------------------
-# Git operations (all inside infraportal/ clone)
+# Git helpers (per-repo)
 # ---------------------------------------------------------------------------
 
-def git(*args: str, check: bool = True) -> subprocess.CompletedProcess:
-    result = subprocess.run(
+def git(repo_name: str, *args: str, check: bool = True) -> subprocess.CompletedProcess:
+    cfg = REPOS[repo_name]
+    return subprocess.run(
         ["git", *args],
-        cwd=str(INFRAPORTAL_ROOT),
+        cwd=str(cfg.path),
         capture_output=True,
         text=True,
         check=check,
     )
-    return result
 
 
-def branch_name(page: str, gap: str) -> str:
+def branch_name(task: Task) -> str:
     date = datetime.date.today().strftime("%Y%m%d")
-    slug = gap.replace("-", "_")
-    return f"productionizer/{date}/{page}/{slug}"
+    slug = task.title.lower()[:50]
+    slug = "".join(c if c.isalnum() else "-" for c in slug).strip("-")
+    slug = "-".join(p for p in slug.split("-") if p)[:45]
+    return f"productionizer/{date}/{slug}"
 
 
-def create_branch(branch: str) -> None:
-    log.info("Fetching origin/main in infraportal clone")
-    git("fetch", "origin", "main")
-    git("checkout", "-B", branch, "origin/main")
-    log.info("Created branch: %s", branch)
+def branch_exists_on_remote(repo_name: str, branch: str) -> bool:
+    result = git(repo_name, "ls-remote", "--heads", "origin", branch, check=False)
+    return bool(result.stdout.strip())
 
 
-def commit_changes(page: str, gap: str) -> None:
-    file_path = file_path_for_page(page)
-    git("add", file_path)
-    msg = (
-        f"fix({page}): productionizer — {gap}\n\n"
-        f"Automated UI/UX improvement applied by the productionizer agent.\n"
-        f"Gap: {gap}\n"
-        f"Page: {page}"
-    )
-    git("commit", "-m", msg)
-    log.info("Committed changes for %s / %s", page, gap)
-
-
-def revert_changes(page: str) -> None:
-    """Hard-reset the page file back to origin/main HEAD and remove untracked files."""
-    log.warning("Reverting changes to %s", page)
-    file_path = file_path_for_page(page)
-    git("checkout", "HEAD", "--", file_path, check=False)
-    git("clean", "-fd", file_path, check=False)
-
-
-def write_output(branch: str, page: str, gap: str, summary: str) -> None:
-    """Write branch + PR metadata for the workflow push/PR step."""
-    title = f"fix({page}): {gap} — productionizer"
-    body = (
-        f"## Summary\n\n"
-        f"Automated productionizer UI/UX improvement.\n\n"
-        f"- **Page**: `{page}`\n"
-        f"- **Gap**: `{gap}`\n"
-        f"- **Change**: {summary}\n\n"
-        f"## Verification\n\n"
-        f"- `npx tsc --noEmit` passed (zero type errors)\n"
-        f"- `npx eslint src/pages/{page}.tsx --max-warnings=0` passed\n\n"
-        f"> Generated by the productionizer agent — review before merging."
-    )
-    OUTPUT_FILE.write_text(json.dumps({
-        "branch": branch,
-        "page": page,
-        "gap": gap,
-        "pr_title": title,
-        "pr_body": body,
-    }, indent=2))
-    log.info("Wrote output to %s (push + PR handled by workflow step)", OUTPUT_FILE)
-
-
-# ---------------------------------------------------------------------------
-# npm/tsc/eslint verification
-# ---------------------------------------------------------------------------
-
-def run_npm(page: str, subcommand: str) -> tuple[bool, str]:
-    """Run tsc or eslint verification for a page. Returns (success, output)."""
-    if subcommand == "tsc":
-        cmd = ["npx", "tsc", "--noEmit"]
-    elif subcommand == "eslint":
-        file_path = file_path_for_page(page)
-        cmd = ["npx", "eslint", file_path, "--max-warnings=0"]
-    else:
-        raise ValueError(f"Unknown subcommand: {subcommand}")
-
+def create_branch(repo_name: str, branch: str) -> bool:
+    log.info("[%s] creating branch: %s", repo_name, branch)
     try:
-        result = subprocess.run(
-            cmd,
-            cwd=str(INFRAPORTAL_ROOT),
-            capture_output=True,
-            text=True,
-            timeout=120,
+        git(repo_name, "fetch", "origin", "main")
+        git(repo_name, "checkout", "-B", branch, "origin/main")
+        return True
+    except subprocess.CalledProcessError as exc:
+        log.error("[%s] branch creation failed: %s", repo_name, exc.stderr)
+        return False
+
+
+def has_changes(repo_name: str) -> bool:
+    result = git(repo_name, "status", "--porcelain", check=False)
+    return bool(result.stdout.strip())
+
+
+def commit_changes(repo_name: str, task: Task) -> bool:
+    try:
+        git(repo_name, "add", "-A")
+        msg = (
+            f"feat({task.dimension}): {task.title}\n\n"
+            f"Automated fullstack change by the productionizer agent.\n"
+            f"Task ID: {task.id}\n"
+            f"Repos: {', '.join(task.repos)}"
         )
-        output = (result.stdout + result.stderr)[:10_000]
-        return result.returncode == 0, output
-    except subprocess.TimeoutExpired:
-        return False, f"ERROR: {subcommand} timed out after 2 minutes"
+        git(repo_name, "commit", "-m", msg)
+        log.info("[%s] committed", repo_name)
+        return True
+    except subprocess.CalledProcessError as exc:
+        log.error("[%s] commit failed: %s", repo_name, exc.stderr)
+        return False
+
+
+def revert_all(repos: list[str]) -> None:
+    for repo_name in repos:
+        try:
+            git(repo_name, "checkout", "HEAD", "--", ".", check=False)
+            git(repo_name, "clean", "-fd", check=False)
+            log.info("[%s] reverted", repo_name)
+        except Exception as exc:
+            log.warning("[%s] revert failed: %s", repo_name, exc)
 
 
 # ---------------------------------------------------------------------------
-# Gemini agentic loop
+# Verification
 # ---------------------------------------------------------------------------
 
-def agent_loop(page: str, gap: str) -> str | None:
-    """
-    Run the Gemini agentic tool-call loop.
-    Returns the agent's final summary string, or None on failure.
-    """
-    api_key = os.environ.get("GOOGLE_API_KEY")
+def verify_repo(repo_name: str) -> tuple[bool, str]:
+    cfg = REPOS[repo_name]
+    for cmd in cfg.verify_commands:
+        log.info("[%s] verifying: %s", repo_name, cmd)
+        try:
+            result = subprocess.run(
+                cmd,
+                shell=True,
+                capture_output=True,
+                text=True,
+                cwd=str(cfg.path),
+                timeout=300,
+            )
+            output = (result.stdout + result.stderr)[:10_000]
+            if result.returncode != 0:
+                log.error("[%s] FAILED (%s):\n%s", repo_name, cmd, output)
+                return False, output
+            log.info("[%s] ✓ %s", repo_name, cmd)
+        except subprocess.TimeoutExpired:
+            msg = f"[{repo_name}] timed out: {cmd}"
+            log.error(msg)
+            return False, msg
+    return True, ""
+
+
+# ---------------------------------------------------------------------------
+# Claude agentic loop
+# ---------------------------------------------------------------------------
+
+def agent_loop(task: Task) -> str | None:
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
-        log.error("GOOGLE_API_KEY is not set")
+        log.error("ANTHROPIC_API_KEY not set")
         return None
 
-    client = genai.Client(api_key=api_key)
-    allowed_file = file_path_for_page(page)
-    dispatch = make_dispatch(allowed_file)
-    tool_declaration = build_tool_declaration()
+    model = MODEL_MAP.get(task.complexity, MODEL_MAP["medium"])
+    log.info("Model: %s (complexity=%s)", model, task.complexity)
 
-    chat = client.chats.create(
-        model="gemini-2.5-flash",
-        config=types.GenerateContentConfig(
-            system_instruction=SYSTEM_PROMPT,
-            tools=[tool_declaration],
-        ),
-    )
+    client = anthropic.Anthropic(api_key=api_key)
+    dispatch = make_dispatch()
+    system_prompt = build_system_prompt(task.repos)
+    user_prompt = build_task_prompt(task)
 
-    user_prompt = build_task_prompt(page, gap)
-    log.info("Starting agent loop for %s / %s", page, gap)
-    response = chat.send_message(user_prompt)
-
+    messages: list[dict] = [{"role": "user", "content": user_prompt}]
     summary: str | None = None
 
     for round_num in range(MAX_TOOL_ROUNDS):
-        function_calls = response.function_calls or []
+        response = client.messages.create(
+            model=model,
+            max_tokens=8096,
+            system=system_prompt,
+            tools=TOOL_DEFINITIONS,
+            messages=messages,
+        )
 
-        if not function_calls:
-            summary = getattr(response, "text", None) or ""
-            if len(summary.strip()) < 20:
-                log.warning("Agent summary too short (%d chars): %r", len(summary), summary)
-                summary = None
-            else:
-                log.info("Agent concluded after %d rounds. Summary: %s", round_num + 1, summary)
+        messages.append({"role": "assistant", "content": response.content})
+
+        if response.stop_reason == "end_turn":
+            for block in response.content:
+                if hasattr(block, "text") and block.text.strip():
+                    summary = block.text.strip()
+                    break
+            log.info("Agent concluded after %d rounds", round_num + 1)
             break
 
-        result_parts = []
-        for fc in function_calls:
-            fn_name = fc.name
-            fn_args = dict(fc.args) if fc.args else {}
-            log.info("Tool call [%d]: %s(%s)", round_num + 1, fn_name, list(fn_args.keys()))
+        if response.stop_reason != "tool_use":
+            log.warning("Unexpected stop_reason: %s", response.stop_reason)
+            break
 
-            if fn_name not in dispatch:
-                result_text = f"ERROR: unknown tool '{fn_name}'"
-            else:
-                try:
-                    result_text = dispatch[fn_name](fn_args)
-                except Exception as exc:
-                    result_text = f"ERROR executing {fn_name}: {exc}"
+        tool_results = []
+        for block in response.content:
+            if block.type != "tool_use":
+                continue
+            fn_name = block.name
+            fn_args = dict(block.input) if block.input else {}
+            log.info("  [%d] %s(%s)", round_num + 1, fn_name, list(fn_args.keys()))
 
-            log.debug("Tool result preview: %.200s", result_text)
-            result_parts.append(
-                types.Part(
-                    function_response=types.FunctionResponse(
-                        name=fn_name,
-                        response={"result": result_text},
-                    )
-                )
-            )
+            try:
+                result_text = dispatch[fn_name](fn_args) if fn_name in dispatch else f"ERROR: unknown tool '{fn_name}'"
+            except Exception as exc:
+                result_text = f"ERROR: {fn_name} raised {exc}"
 
-        response = chat.send_message(result_parts)
+            log.debug("  result: %.300s", result_text)
+            tool_results.append({
+                "type": "tool_result",
+                "tool_use_id": block.id,
+                "content": result_text,
+            })
 
+        messages.append({"role": "user", "content": tool_results})
     else:
-        log.error("Agent loop exhausted %d rounds without a final response", MAX_TOOL_ROUNDS)
+        log.error("Agent exhausted %d rounds without concluding", MAX_TOOL_ROUNDS)
 
     return summary
+
+
+# ---------------------------------------------------------------------------
+# Output
+# ---------------------------------------------------------------------------
+
+def write_output(task: Task, branch: str, affected_repos: list[str], summary: str) -> None:
+    prs = []
+    for repo_name in affected_repos:
+        cfg = REPOS[repo_name]
+        verify_lines = "\n".join(f"- `{cmd}` passed" for cmd in cfg.verify_commands)
+        prs.append({
+            "repo": cfg.github_repo,
+            "branch": branch,
+            "title": f"feat({task.dimension}): {task.title}",
+            "body": (
+                f"## Summary\n\n{summary}\n\n"
+                f"## Task\n\n"
+                f"- **ID**: `{task.id}`\n"
+                f"- **Dimension**: `{task.dimension}`\n"
+                f"- **Repos**: {', '.join(f'`{r}`' for r in task.repos)}\n\n"
+                f"## Verification\n\n{verify_lines}\n\n"
+                f"> Generated by the productionizer agent — review before merging."
+            ),
+        })
+    OUTPUT_FILE.write_text(json.dumps({
+        "task_id": task.id,
+        "branch": branch,
+        "summary": summary,
+        "prs": prs,
+    }, indent=2))
+    log.info("Output written to %s", OUTPUT_FILE)
 
 
 # ---------------------------------------------------------------------------
@@ -279,103 +266,111 @@ def agent_loop(page: str, gap: str) -> str | None:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    state = load_state()
+    backlog = load_backlog()
 
-    force_page = os.environ.get("FORCE_PAGE", "").strip()
-    force_gap  = os.environ.get("FORCE_GAP", "").strip()
-
-    if force_page and force_gap:
-        page, gap = force_page, force_gap
-        log.info("Using forced task: %s / %s", page, gap)
+    force_id = os.environ.get("FORCE_TASK_ID", "").strip()
+    if force_id:
+        task = next((t for t in backlog if t.id == force_id), None)
+        if not task:
+            log.error("Task not found: %s", force_id)
+            sys.exit(EXIT_ERROR)
+        log.info("Forced task: [%s] %s", task.id, task.title)
     else:
-        task = pick_next_task(state)
+        task = pick_next_task(backlog)
         if task is None:
-            log.info("All %d tasks are complete. Nothing to do.", len(build_task_queue()))
+            log.info("Backlog empty. Run `python planner.py` to generate more tasks.")
             sys.exit(EXIT_DONE)
-        page, gap = task
-        log.info("Selected next task: %s / %s", page, gap)
+        log.info("Next task: [%s] %s", task.id, task.title)
 
-    branch = branch_name(page, gap)
+    missing = [r for r in task.repos if r not in REPOS]
+    if missing:
+        log.error("Unknown repos in task %s: %s", task.id, missing)
+        sys.exit(EXIT_ERROR)
 
-    # Check if branch already exists on remote (duplicate run guard)
-    existing = git("ls-remote", "--heads", "origin", branch, check=False)
-    if existing.stdout.strip():
-        log.warning("Branch %s already exists on remote — marking done and continuing", branch)
-        record_completion(state, page, gap)
-        save_state(state)
+    branch = branch_name(task)
+
+    if all(branch_exists_on_remote(r, branch) for r in task.repos):
+        log.warning("Branch %s already exists everywhere — marking done", branch)
+        task.status = "done"
+        save_backlog(backlog)
         sys.exit(EXIT_SKIP)
 
-    create_branch(branch)
+    for repo_name in task.repos:
+        if not create_branch(repo_name, branch):
+            revert_all(task.repos)
+            sys.exit(EXIT_ERROR)
+
+    task.status = "in_progress"
+    save_backlog(backlog)
 
     try:
-        summary = agent_loop(page, gap)
+        summary = agent_loop(task)
 
-        file_path = file_path_for_page(page)
-        status = git("status", "--porcelain", file_path, check=False)
-        files_changed = bool(status.stdout.strip())
+        affected_repos = [r for r in task.repos if has_changes(r)]
 
-        if not files_changed:
-            log.info("Agent made no file changes — marking task done and continuing.")
-            record_completion(state, page, gap)
-            save_state(state)
+        if not affected_repos:
+            log.info("No file changes — skipping")
+            task.status = "skipped"
+            task.completed_at = datetime.datetime.now(datetime.UTC).isoformat()
+            save_backlog(backlog)
             sys.exit(EXIT_SKIP)
 
         if summary and summary.upper().startswith("SKIP:"):
-            log.info("Agent reported task already satisfied: %s", summary)
-            revert_changes(page)
-            record_completion(state, page, gap)
-            save_state(state)
+            log.info("Agent reported already satisfied: %s", summary)
+            revert_all(task.repos)
+            task.status = "skipped"
+            task.completed_at = datetime.datetime.now(datetime.UTC).isoformat()
+            save_backlog(backlog)
             sys.exit(EXIT_SKIP)
 
         if not summary:
-            summary = f"{page}: productionizer applied {gap} improvements"
-            log.warning("Agent produced no summary; using fallback: %s", summary)
+            summary = f"Completed: {task.title}"
 
-        # Verify: tsc
-        log.info("Running npx tsc --noEmit in infraportal/")
-        ok, output = run_npm(page, "tsc")
-        if not ok:
-            log.error("tsc --noEmit failed:\n%s", output)
-            revert_changes(page)
-            record_completion(state, page, gap)
-            save_state(state)
-            sys.exit(EXIT_SKIP)
-        log.info("tsc passed")
+        for repo_name in affected_repos:
+            ok, _ = verify_repo(repo_name)
+            if not ok:
+                revert_all(task.repos)
+                task.status = "skipped"
+                task.completed_at = datetime.datetime.now(datetime.UTC).isoformat()
+                save_backlog(backlog)
+                sys.exit(EXIT_SKIP)
 
-        # Verify: eslint
-        log.info("Running npx eslint %s --max-warnings=0", file_path_for_page(page))
-        ok, output = run_npm(page, "eslint")
-        if not ok:
-            log.error("eslint failed:\n%s", output)
-            revert_changes(page)
-            record_completion(state, page, gap)
-            save_state(state)
-            sys.exit(EXIT_SKIP)
-        log.info("eslint passed")
+        for repo_name in affected_repos:
+            if not commit_changes(repo_name, task):
+                revert_all(task.repos)
+                sys.exit(EXIT_ERROR)
 
-        commit_changes(page, gap)
-        write_output(branch, page, gap, summary)
+        write_output(task, branch, affected_repos, summary)
 
-        record_completion(state, page, gap, summary)
-        save_state(state)
-        log.info("State saved. Total completed: %d", len(state["completed"]))
+        task.status = "done"
+        task.completed_at = datetime.datetime.now(datetime.UTC).isoformat()
+        task.summary = summary
+        save_backlog(backlog)
+        log.info("Done: %s", task.title)
 
     except subprocess.CalledProcessError as exc:
-        log.exception("Git or gh command failed: %s\nstderr: %s", exc, exc.stderr)
-        revert_changes(page)
+        log.exception("Git command failed: %s", exc.stderr)
+        revert_all(task.repos)
+        task.status = "pending"
+        save_backlog(backlog)
         sys.exit(EXIT_ERROR)
+
     except Exception as exc:
         is_transient = (
-            isinstance(exc, genai_errors.ServerError)
-            or type(exc).__name__ == "ServerError"
-            or (hasattr(exc, "status_code") and getattr(exc, "status_code", 0) >= 500)
-        )
+            isinstance(exc, anthropic.APIStatusError) and exc.status_code >= 500
+        ) or isinstance(exc, anthropic.RateLimitError)
+
         if is_transient:
-            log.warning("Transient Gemini API error — reverting and skipping: %s", exc)
-            revert_changes(page)
+            log.warning("Transient API error — will retry next run: %s", exc)
+            revert_all(task.repos)
+            task.status = "pending"
+            save_backlog(backlog)
             sys.exit(EXIT_SKIP)
-        log.exception("Unexpected error — reverting: %s", exc)
-        revert_changes(page)
+
+        log.exception("Unexpected error: %s", exc)
+        revert_all(task.repos)
+        task.status = "pending"
+        save_backlog(backlog)
         sys.exit(EXIT_ERROR)
 
 
