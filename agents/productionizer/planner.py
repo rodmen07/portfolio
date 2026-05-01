@@ -32,7 +32,7 @@ log = logging.getLogger("planner")
 
 AGENT_DIR = pathlib.Path(__file__).parent
 DIMENSIONS_FILE = AGENT_DIR / "dimensions.yaml"
-PLANNER_MODEL = "claude-opus-4-7"
+PLANNER_MODEL = "claude-haiku-4-5-20251001"
 
 
 def load_dimensions() -> list[dict]:
@@ -105,10 +105,10 @@ Requirements for each task:
 4. Genuinely valuable (not trivial, not already present from the repo scan)
 5. Grounded in the actual repo structure shown above — name real files/dirs where relevant
 
-Complexity guide:
-  low    = 1-2 files, clear scope, no design decisions → claude-haiku-4-5
-  medium = 2-5 files, moderate decisions, single repo  → claude-sonnet-4-6
-  high   = 5+ files, cross-repo, architectural choices → claude-opus-4-7
+Complexity guide (informational only — all tasks run on Haiku):
+  low    = 1-2 files, clear scope, no design decisions
+  medium = 2-5 files, moderate decisions, single repo
+  high   = 5+ files, cross-repo, architectural choices
 
 Return ONLY a YAML block (no other text):
 ```yaml

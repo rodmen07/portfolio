@@ -51,11 +51,7 @@ EXIT_ERROR     = 1
 EXIT_SKIP      = 2
 EXIT_DONE      = 3
 
-MODEL_MAP = {
-    "low":    "claude-haiku-4-5-20251001",
-    "medium": "claude-sonnet-4-6",
-    "high":   "claude-opus-4-7",
-}
+AGENT_MODEL = "claude-haiku-4-5-20251001"
 
 
 # ---------------------------------------------------------------------------
@@ -168,8 +164,8 @@ def agent_loop(task: Task) -> str | None:
         log.error("ANTHROPIC_API_KEY not set")
         return None
 
-    model = MODEL_MAP.get(task.complexity, MODEL_MAP["medium"])
-    log.info("Model: %s (complexity=%s)", model, task.complexity)
+    model = AGENT_MODEL
+    log.info("Model: %s", model)
 
     client = anthropic.Anthropic(api_key=api_key)
     dispatch = make_dispatch()

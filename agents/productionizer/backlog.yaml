@@ -1,9 +1,843 @@
-# Productionizer task backlog.
-# Populated by: python planner.py
-# Drained by:   python runner.py  (or  python main.py)
-#
-# You can manually add, edit, reorder, or delete tasks here.
-# Status values: pending | in_progress | done | skipped
-# Complexity:    low (haiku) | medium (sonnet) | high (opus)
+tasks:
+- id: frontend-ui-ux-38e58c17
+  dimension: frontend-ui-ux
+  title: Add skeleton loader components matching content shapes
+  description: 'Create a reusable skeleton system in `src/components/Skeleton.tsx`
+    (create the components directory if missing) exporting:
 
-tasks: []
+    - `<Skeleton />` base primitive (configurable width/height/rounded, shimmer animation
+    via Tailwind keyframes)
+
+    - `<SkeletonText lines={n} />` for text blocks
+
+    - `<SkeletonCard />` matching the dashboard/list card shape used in `src/features/`
+    and `src/pages/`
+
+    - `<SkeletonTable rows={n} cols={n} />` for tabular views
+
+    Add a `shimmer` keyframe in `tailwind.config.js` (background-position animation)
+    and a `bg-shimmer` utility using a gradient.
+
+    Replace any existing "Loading..." text in pages under `src/pages/` and feature
+    components in `src/features/` with the appropriate skeleton, ensuring skeletons
+    match the final rendered layout dimensions to avoid layout shift.'
+  repos:
+  - infraportal
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: frontend-ui-ux-f716cbcc
+  dimension: frontend-ui-ux
+  title: Implement structured error card with retry
+  description: 'Create `src/components/ErrorCard.tsx` exporting `<ErrorCard title?,
+    message, onRetry?, details? />` that renders a bordered card with an alert icon,
+    primary message, optional collapsible technical details (`<details>` element),
+    and a "Retry" button when `onRetry` is provided.
+
+    Style with red-tinted border/background using Tailwind, with proper dark-mode
+    classes if dark mode exists in `tailwind.config.js`.
+
+    Also create `src/components/ErrorBoundary.tsx` (React class component) that catches
+    render errors and renders `ErrorCard` with a "Reload page" action.
+
+    Wrap the route content in `src/App.tsx` with the ErrorBoundary, and replace any
+    ad-hoc error rendering in `src/features/` with `ErrorCard`.'
+  repos:
+  - infraportal
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: frontend-ui-ux-be94bad8
+  dimension: frontend-ui-ux
+  title: Add page transition animations with Framer Motion
+  description: 'Install `framer-motion`. In `src/App.tsx`, wrap the routed content
+    with `<AnimatePresence mode="wait">` keyed on `location.pathname`. Create `src/components/PageTransition.tsx`
+    that wraps children in a `motion.div` with fade+slight-y-translate (initial: opacity
+    0, y: 8; animate: opacity 1, y: 0; exit: opacity 0, y: -8; duration ~180ms, easeOut).
+
+    Use it in each page under `src/pages/` as the outer wrapper.
+
+    Respect `prefers-reduced-motion`: in the transition variants, conditionally disable
+    animations using `useReducedMotion()` from framer-motion.'
+  repos:
+  - infraportal
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: frontend-ui-ux-83927b73
+  dimension: frontend-ui-ux
+  title: Build illustrated empty-state component
+  description: 'Create `src/components/EmptyState.tsx` exporting `<EmptyState icon?,
+    title, description, action?: {label, onClick | href} />`. Default to an inline
+    SVG illustration (simple geometric shapes, currentColor-based so it adapts to
+    theme) when no icon is provided.
+
+    Create 2-3 variant SVGs in `src/assets/empty/` (e.g., `no-results.svg`, `no-items.svg`,
+    `no-search.svg`).
+
+    Audit pages in `src/pages/` and feature lists in `src/features/` and replace any
+    "No items" / blank list scenarios with `<EmptyState>` including a clear CTA (e.g.,
+    "Create your first X" or "Clear filters").'
+  repos:
+  - infraportal
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: frontend-ui-ux-8072e7ca
+  dimension: frontend-ui-ux
+  title: 'Polish navigation: active states, keyboard nav, and breadcrumbs'
+  description: 'In the primary navigation component (locate in `src/App.tsx` or `src/components/`/`src/features/`),
+    enhance the active link styling: left-border accent or pill background, bold weight,
+    and `aria-current="page"`. Use `NavLink` from react-router with the active className
+    API.
+
+    Add visible focus rings (`focus-visible:ring-2 ring-offset-2 ring-blue-500`) to
+    all nav items and buttons globally via a Tailwind `@layer base` rule in `src/index.css`.
+
+    Create `src/components/Breadcrumbs.tsx` that derives crumbs from the current route
+    path (split pathname, title-case segments, link each segment except the last).
+    Render it at the top of each page under `src/pages/` where there is hierarchy.
+
+    Ensure Tab order is logical and add `Skip to content` link at the top of `App.tsx`
+    targeting `<main id="main">`.'
+  repos:
+  - infraportal
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: frontend-ui-ux-ca846dca
+  dimension: frontend-ui-ux
+  title: Make sidebar responsive with mobile drawer
+  description: 'Refactor the sidebar/nav layout (likely in `src/App.tsx` or a layout
+    component) to collapse below the `md` breakpoint into a drawer.
+
+    Add a hamburger button in the top bar (visible `md:hidden`) that toggles `sidebarOpen`
+    state. The drawer should slide in from the left using a CSS transform transition
+    (~200ms), with a semi-transparent backdrop that closes the drawer on click and
+    on Escape key.
+
+    Trap focus within the drawer when open and restore focus to the toggle button
+    on close. Ensure all nav/touch targets are at least 44x44px.
+
+    Also add a desktop collapse toggle that reduces the sidebar to icon-only mode,
+    persisting the preference in `localStorage` under `infraportal.sidebar.collapsed`.'
+  repos:
+  - infraportal
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: frontend-ui-ux-13335e22
+  dimension: frontend-ui-ux
+  title: Add form UX primitives with inline validation
+  description: 'Create `src/components/form/` with: `Field.tsx` (label + helper +
+    error wrapper), `Input.tsx`, `Textarea.tsx`, `Select.tsx`. Each should support
+    `error?: string`, `hint?: string`, render proper `aria-invalid`, `aria-describedby`,
+    and show error text inline below the field with a small alert icon.
+
+    Style focus rings (`focus-visible:ring-2 ring-blue-500`), disabled state (`disabled:opacity-60
+    disabled:cursor-not-allowed disabled:bg-gray-50`), and invalid state (red border
+    + red ring on focus).
+
+    Add a `useFieldValidation` hook in `src/utils/useFieldValidation.ts` that validates
+    onBlur initially then onChange after first blur (a common UX pattern to avoid
+    noisy errors).
+
+    Refactor at least one existing form in `src/features/` or `src/pages/` to use
+    these primitives as a reference implementation.'
+  repos:
+  - infraportal
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: frontend-ui-ux-4905becb
+  dimension: frontend-ui-ux
+  title: 'Add micro-interactions: button press, hover, and list animations'
+  description: 'Create `src/components/Button.tsx` (if not present) with variants
+    (primary/secondary/ghost/danger) and sizes. Include hover states (subtle brightness/shadow
+    lift), active/press state (`active:scale-[0.98] active:brightness-95`), focus-visible
+    ring, and a built-in loading state (spinner + disabled, preserving width).
+
+    In `src/index.css`, add utility classes `.card-hover` (translate-y on hover, shadow
+    transition) and `.row-hover` (background tint on hover) and apply to card/list
+    items in `src/features/` and `src/pages/`.
+
+    For dynamic lists, wrap items with framer-motion''s `<AnimatePresence>` and `<motion.li>`
+    using layout prop and fade+slide enter/exit (180ms) so adding/removing items animates
+    smoothly. Apply this to one prominent list in the app as a reference pattern.
+
+    Ensure all animations honor `prefers-reduced-motion` via media query in the CSS
+    utilities.'
+  repos:
+  - infraportal
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: frontend-components-d2c9522a
+  dimension: frontend-components
+  title: Add reusable Badge and StatusChip primitives
+  description: 'Create `src/features/ui/Badge.tsx` and `src/features/ui/StatusChip.tsx`
+    as reusable primitives.
+
+    Badge should accept `variant` ("default" | "info" | "success" | "warning" | "danger"
+    | "neutral"),
+
+    `size` ("sm" | "md"), and optional `dot` boolean for a leading status dot. StatusChip
+    wraps Badge
+
+    with a status-to-variant map (e.g., "running"→success, "pending"→warning, "failed"→danger,
+
+    "stopped"→neutral) and accepts `status: string` plus optional `label` override.
+
+    Use Tailwind classes consistent with existing styles in `src/index.css`. Export
+    from a new
+
+    `src/features/ui/index.ts` barrel. Add a basic Vitest test for variant class application.'
+  repos:
+  - infraportal
+  complexity: low
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: frontend-components-8275638b
+  dimension: frontend-components
+  title: Build Tooltip and Popover primitives with positioning
+  description: 'Add `src/features/ui/Tooltip.tsx` and `src/features/ui/Popover.tsx`.
+    Tooltip wraps a trigger
+
+    child, shows on hover/focus after a configurable `delay` (default 300ms), supports
+    `side`
+
+    ("top" | "right" | "bottom" | "left") and `align` ("start" | "center" | "end").
+
+    Popover is click-triggered with controlled/uncontrolled modes, closes on outside
+    click and
+
+    Escape, traps focus optionally via `trapFocus` prop. Both use a portal mounted
+    to document.body
+
+    and compute position relative to the trigger via getBoundingClientRect; recompute
+    on scroll/resize.
+
+    Include arrow element and aria attributes (`role="tooltip"`, `aria-describedby`).
+    Export from
+
+    `src/features/ui/index.ts`.'
+  repos:
+  - infraportal
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: frontend-components-5add6b4f
+  dimension: frontend-components
+  title: 'Implement DataTable enhancements: sorting, selection, and CSV export'
+  description: 'Locate the existing table implementation under `src/features/` (or
+    create `src/features/table/DataTable.tsx`
+
+    if missing). Add: (1) column sorting—click header to cycle asc/desc/none with
+    sort icon; accept
+
+    `sortable` per column and a `sortAccessor` function. (2) Row selection with header
+    checkbox
+
+    (select-all on current page), per-row checkbox, and `onSelectionChange(ids)` callback;
+
+    maintain selected state via `Set<string>`. (3) Inline row actions slot (`renderRowActions(row)`)
+
+    rendered in a sticky-right column. (4) Export selected (or all if none selected)
+    to CSV via
+
+    a helper `src/utils/csv.ts` exposing `toCSV(rows, columns)` and `downloadCSV(filename,
+    csv)`.
+
+    Update one consuming page in `src/pages/` to demonstrate.'
+  repos:
+  - infraportal
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: frontend-components-13ec585a
+  dimension: frontend-components
+  title: Add Sparkline and Donut chart widgets for dashboards
+  description: 'Create `src/features/widgets/Sparkline.tsx` and `src/features/widgets/Donut.tsx`
+    as
+
+    dependency-free SVG components. Sparkline accepts `data: number[]`, optional `width`,
+    `height`,
+
+    `stroke`, and `fill` (gradient area under line); auto-scales min/max with 10%
+    padding and
+
+    renders a final-point marker. Donut accepts `segments: {label, value, color}[]`,
+    optional
+
+    `size` and `thickness`, renders arcs via SVG path math, and includes a centered
+    slot for a
+
+    total label. Add a `MetricTrend.tsx` widget combining a numeric value, delta percentage
+    with
+
+    up/down arrow (green/red), and inline Sparkline. Demo usage on a dashboard page
+    in `src/pages/`.'
+  repos:
+  - infraportal
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: frontend-components-e7eb02d3
+  dimension: frontend-components
+  title: Build command palette with fuzzy search and keyboard nav
+  description: 'Add `src/features/command/CommandPalette.tsx` triggered by Cmd/Ctrl+K
+    globally. Mount once in
+
+    `src/App.tsx`. Provide a `CommandRegistry` (`src/features/command/registry.ts`)
+    exposing
+
+    `registerCommand({id, title, group, shortcut?, run})` and `useCommands()` hook.
+
+    Palette renders a modal with an input, grouped results (Navigation, Actions, Recent),
+
+    arrow-key navigation, Enter to execute, Esc to close. Implement simple fuzzy matching
+
+    (subsequence + score) in `src/features/command/fuzzy.ts`. Pre-register navigation
+    commands
+
+    for routes found in `src/pages/`. Persist last 5 executed command IDs to localStorage
+    under
+
+    `infraportal.commands.recent`.'
+  repos:
+  - infraportal
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: frontend-components-cdebc7a1
+  dimension: frontend-components
+  title: Create global keyboard shortcut system with help overlay
+  description: 'Add `src/features/shortcuts/useShortcut.ts` hook and `ShortcutProvider`
+    context in
+
+    `src/features/shortcuts/ShortcutProvider.tsx`. The hook registers `{keys: ''g
+    h'', description, scope}`
+
+    with support for single keys, modifier combos (mod+k), and chord sequences with
+    a 1s timeout.
+
+    Ignore inputs/textareas/contenteditable unless `allowInInput` is true. Provider
+    tracks all
+
+    registered shortcuts and exposes a `?` (Shift+/) overlay component `ShortcutsHelp.tsx`
+    that
+
+    lists shortcuts grouped by `scope`. Wire provider in `src/App.tsx`. Include demo:
+    register
+
+    `g d` → navigate dashboard, `g s` → settings.'
+  repos:
+  - infraportal
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: frontend-components-16783c88
+  dimension: frontend-components
+  title: Polish toast notification system with queue, actions, and promise API
+  description: 'Refactor or create `src/features/toast/Toaster.tsx` and `src/features/toast/useToast.ts`.
+
+    Support variants (success, error, info, warning), optional `action: {label, onClick}`,
+
+    `duration` (default 5s, Infinity for sticky), and a max-visible queue (3) with
+    overflow
+
+    collapsed into a "+N more" indicator. Add `toast.promise(promise, {loading, success,
+    error})`
+
+    that auto-updates a single toast. Animate enter/exit with CSS transitions (slide+fade).
+
+    Pause auto-dismiss on hover. Place provider in `src/App.tsx`. Toasts stack bottom-right;
+
+    mobile (sm breakpoint) stack top-center full-width.'
+  repos:
+  - infraportal
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: frontend-components-5313449c
+  dimension: frontend-components
+  title: Add collapsible sidebar sections with localStorage persistence
+  description: 'Update the sidebar component in `src/features/` (likely `Sidebar.tsx`
+    or under a layout folder)
+
+    to support grouped, collapsible sections. Each section has a header with chevron
+    toggle and
+
+    animated height collapse. Persist open/closed state per section ID in localStorage
+    under key
+
+    `infraportal.sidebar.sections` as `Record<string, boolean>`. Create a `useCollapsibleState(id,
+    defaultOpen)`
+
+    hook in `src/features/sidebar/useCollapsibleState.ts` that reads/writes this map
+    and syncs across
+
+    tabs via the `storage` event. Ensure SSR/initial-render safety (guard `window`).
+    Add aria-expanded
+
+    and keyboard support (Enter/Space to toggle).'
+  repos:
+  - infraportal
+  complexity: low
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: backend-new-features-7ba218ed
+  dimension: backend-new-features
+  title: Add bulk task operations endpoint to backend-service
+  description: 'Add `POST /tasks/bulk` to backend-service supporting batch create,
+    update, and delete actions in a single request with partial-success semantics.
+
+
+    Files to modify:
+
+    - `src/lib/` — add a new `bulk.rs` module with handlers `bulk_tasks` accepting
+    a JSON payload like `{ "operations": [{ "op": "create|update|delete", "data":
+    {...}, "id": "..." }] }`.
+
+    - `src/lib.rs` or router setup — register the new route under the existing tasks
+    scope.
+
+    - `tests/api_tasks.rs` — add integration tests covering all-success, mixed success/failure,
+    and validation error cases.
+
+
+    Response shape: `{ "results": [{ "index": 0, "status": "ok|error", "id": "...",
+    "error": "..." }], "succeeded": N, "failed": M }` with HTTP 207-style multi-status
+    (return 200 with per-item status). Cap the number of operations at 100 per request
+    and return 400 if exceeded. Wrap each operation in its own transaction so one
+    failure does not abort others.'
+  repos:
+  - backend-service
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: backend-new-features-550a52a6
+  dimension: backend-new-features
+  title: Add task aggregation/summary endpoint with status and date breakdowns
+  description: 'Add `GET /tasks/summary` to backend-service returning aggregate counts
+    useful for dashboards.
+
+
+    Implementation:
+
+    - Create `src/lib/summary.rs` with a handler that returns `{ "total": N, "by_status":
+    {"todo": x, "in_progress": y, "done": z}, "by_difficulty": {...}, "by_source":
+    {...}, "created_last_7_days": N, "due_overdue": N, "due_next_7_days": N }`.
+
+    - Use a single SQL query with `COUNT(*) FILTER (WHERE ...)` (or equivalent SQLite
+    case expressions) to keep it efficient.
+
+    - Accept optional `from` and `to` query params (ISO 8601) to scope all aggregations
+    to a date window on `created_at`.
+
+    - Register route in the main router and add tests in `tests/api_tasks.rs` seeding
+    tasks across statuses and verifying counts.'
+  repos:
+  - backend-service
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: backend-new-features-b8a8dd62
+  dimension: backend-new-features
+  title: Implement cursor-based pagination for tasks list endpoint
+  description: 'Replace/augment offset pagination on `GET /tasks` in backend-service
+    with cursor-based pagination keyed on `(created_at, id)`.
+
+
+    Changes:
+
+    - Update the list handler in `src/lib/` to accept `?cursor=<opaque>&limit=<n>`
+    (max 100, default 25). Decode cursor as base64 of `"<created_at_iso>|<id>"`.
+
+    - SQL query: `WHERE (created_at, id) < (:cursor_ts, :cursor_id) ORDER BY created_at
+    DESC, id DESC LIMIT :limit + 1`.
+
+    - Response: `{ "items": [...], "next_cursor": "..."|null }`. Compute `next_cursor`
+    by peeking the (limit+1)th row.
+
+    - Keep backward compat: if `?offset=` is passed, fall back to existing behavior
+    with a deprecation header `Deprecation: true`.
+
+    - Add tests for first page, mid-page, last page, and empty result in `tests/api_tasks.rs`.'
+  repos:
+  - backend-service
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: backend-new-features-d701e301
+  dimension: backend-new-features
+  title: Add streaming CSV export endpoint for tasks
+  description: 'Add `GET /tasks/export.csv` to backend-service that streams all tasks
+    (filtered) as CSV without buffering in memory.
+
+
+    Implementation:
+
+    - In `src/lib/`, add `export.rs` with a handler that uses Axum''s `StreamBody`
+    (or `Response` with a `futures::Stream`) and `csv::Writer` writing into a channel-backed
+    `AsyncRead`.
+
+    - Stream rows directly from a `sqlx` query stream (`.fetch(&pool)`) so memory
+    stays constant for large datasets.
+
+    - Support filter query params: `status`, `difficulty`, `source`, `from`, `to`
+    (created_at range), `q` (LIKE on title/description).
+
+    - Set headers: `Content-Type: text/csv; charset=utf-8`, `Content-Disposition:
+    attachment; filename="tasks-<date>.csv"`.
+
+    - Add a basic test that exercises the endpoint with a few seeded rows and verifies
+    header line plus row content.'
+  repos:
+  - backend-service
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: backend-new-features-5fe31bd2
+  dimension: backend-new-features
+  title: Add soft-delete and restore for projects in projects-service
+  description: 'Migrate projects from hard-delete to soft-delete with restore support.
+
+
+    Steps:
+
+    - New migration `migrations/0009_add_projects_deleted_at.sql` adding `deleted_at
+    TIMESTAMPTZ NULL` and a partial index on `(deleted_at) WHERE deleted_at IS NULL`.
+
+    - Update the existing `DELETE /projects/:id` handler in `src/lib/` to set `deleted_at
+    = NOW()` instead of removing rows.
+
+    - Add `POST /projects/:id/restore` to clear `deleted_at`, returning 404 if the
+    row doesn''t exist or 409 if already active.
+
+    - Update all list/get queries to filter `WHERE deleted_at IS NULL` by default;
+    accept `?include_deleted=true` to bypass.
+
+    - Add `DELETE /projects/:id?hard=true` (admin-only via existing role check) to
+    permanently remove.
+
+    - Add integration tests in `tests/integration_test.rs` for soft-delete, restore,
+    and hidden-from-list behavior.'
+  repos:
+  - projects-service
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: backend-new-features-29a4b522
+  dimension: backend-new-features
+  title: Add outbound webhook delivery on task mutations
+  description: 'Add a minimal webhook subscription + delivery system to backend-service
+    for task create/update/delete events.
+
+
+    Implementation:
+
+    - New migration `migrations/0011_create_webhooks.sql` with table `webhooks (id,
+    url, secret, events TEXT[]/JSON, active, created_at)` and `webhook_deliveries
+    (id, webhook_id, event, payload, status_code, attempt, delivered_at, error)`.
+
+    - New `src/lib/webhooks.rs` exposing CRUD endpoints `GET/POST /webhooks`, `DELETE
+    /webhooks/:id`.
+
+    - Hook into existing task create/update/delete handlers to enqueue an event (in-memory
+    `tokio::sync::mpsc`) describing the change.
+
+    - Background `tokio::spawn` worker reads events, fetches matching webhooks, and
+    POSTs JSON `{event, data, timestamp}` with header `X-Webhook-Signature: sha256=<hmac(secret,
+    body)>`. Retry up to 3 times with exponential backoff on non-2xx; log to `webhook_deliveries`.
+
+    - Add a test using `wiremock` (or a local hyper server) verifying signature and
+    delivery for a created task.'
+  repos:
+  - backend-service
+  complexity: high
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: backend-new-features-870878cb
+  dimension: backend-new-features
+  title: Add advanced multi-field filtering and full-text search to tasks list
+  description: 'Extend `GET /tasks` in backend-service with rich filtering parameters.
+
+
+    Add support for:
+
+    - `status` (comma-separated, IN clause), `difficulty` (range via `difficulty_min`/`difficulty_max`),
+    `source`, `goal`, `labels` (comma-separated, all-must-match).
+
+    - Date ranges: `created_from`, `created_to`, `due_from`, `due_to` (ISO 8601, inclusive).
+
+    - `q` for full-text-ish search across `title` and `description` using `LIKE ''%''
+    || :q || ''%''` with case-insensitivity (`COLLATE NOCASE` for SQLite).
+
+    - `sort` whitelist: `created_at`, `due_date`, `difficulty` with optional `-` prefix
+    for desc.
+
+
+    Implementation in the existing list handler under `src/lib/`. Build the SQL dynamically
+    with bound parameters (no string concatenation of values). Reject unknown sort
+    fields with 400. Add a test matrix in `tests/api_tasks.rs` covering each filter
+    combination and an invalid input case.'
+  repos:
+  - backend-service
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: backend-new-features-d71d8822
+  dimension: backend-new-features
+  title: Add internal service-to-service JWT auth in go-gateway
+  description: 'Strengthen inter-service auth: have go-gateway mint short-lived internal
+    JWTs and forward them to upstream services, which validate them.
+
+
+    Changes in go-gateway:
+
+    - Add `internal/middleware/internal_jwt.go` providing a middleware that mints
+    an HS256 JWT with claims `{iss: "go-gateway", aud: "<upstream>", exp: now+60s,
+    sub: <user_id_or_anonymous>, scope: <derived>}` using a shared secret from `INTERNAL_JWT_SECRET`
+    env var.
+
+    - In `internal/proxy/`, attach the token as `X-Internal-Auth: Bearer <jwt>` on
+    every proxied request, in addition to the existing user `Authorization` header.
+
+    - Update `internal/config/` to load and validate `INTERNAL_JWT_SECRET` at startup;
+    fail fast if missing in non-dev mode.
+
+    - Add a unit test that the middleware sets the header and that the JWT verifies
+    with the expected claims.
+
+
+    Document the header contract and expected validation logic in `README.md` so downstream
+    services (backend-service, projects-service, auth-service) can adopt verification
+    incrementally.'
+  repos:
+  - go-gateway
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: fullstack-features-e3150580
+  dimension: fullstack-features
+  title: Add inline edit for task title and due date in tasks list
+  description: 'Implement click-to-edit inline editing for task `title` and `due_date`
+    fields in the infraportal tasks list page.
+
+    Backend (backend-service): ensure `PATCH /tasks/:id` accepts partial updates for
+    `title` and `due_date` (verify in `src/lib/` handlers; add if missing). Return
+    updated row. Validate title length (1-200) and due_date as ISO8601 or null.
+
+    Frontend (infraportal): in the tasks page under `src/pages/` or `src/features/`,
+    wrap the title cell and due_date cell with an `InlineEdit` component that switches
+    to an input/date picker on click, commits on blur or Enter, reverts on Escape.
+    Show optimistic update with rollback on PATCH failure, and a small spinner while
+    in flight. Reuse existing toast system for error feedback.'
+  repos:
+  - infraportal
+  - backend-service
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: fullstack-features-9ee236dd
+  dimension: fullstack-features
+  title: Build account detail page aggregating contacts, activities, and opportunities
+    timeline
+  description: 'Create a new `AccountDetailPage` in infraportal at `src/pages/AccountDetail.tsx`
+    (and a route in `App.tsx`) that fetches from accounts-service, contacts-service,
+    activities-service, and opportunities-service (via gateway) and renders a unified
+    timeline.
+
+    Sections: account header (name, owner, status), tabs/columns for Contacts, Opportunities,
+    and a merged chronological Activities+Opportunities timeline. Use existing fetch
+    utilities in `src/utils/`. Handle loading skeletons and per-section error cards.
+
+    If a `/accounts/:id/summary` aggregation endpoint does not exist in accounts-service,
+    add a thin one in `microservices/accounts-service/src/` that fan-outs to the other
+    services and returns a single JSON payload to reduce roundtrips. Cache for 30s
+    in-memory.'
+  repos:
+  - infraportal
+  - microservices
+  complexity: high
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: fullstack-features-363e3a78
+  dimension: fullstack-features
+  title: Implement multi-select bulk status change UI for tasks table
+  description: 'In infraportal tasks list, add row checkboxes and a header "select
+    all (page)" checkbox. Track selected IDs in component state. When >=1 row is selected,
+    render a sticky action bar with "Mark Done", "Mark In Progress", "Delete", and
+    "Clear selection".
+
+    Wire actions to the existing/queued bulk operations endpoint on backend-service
+    (`POST /tasks/bulk` with `{ ids, action, payload }`). Show progress toast, then
+    refresh the list and clear selection. Handle partial failures by surfacing failed
+    IDs in an error toast with a "Retry failed" action.
+
+    Files: `src/features/tasks/` components and a new `BulkActionBar.tsx`.'
+  repos:
+  - infraportal
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: fullstack-features-e52f8e4d
+  dimension: fullstack-features
+  title: Add saved filter sets for tasks list with backend persistence
+  description: 'Backend (backend-service): add a new migration `0011_create_saved_filters.sql`
+    with table `saved_filters(id, user_id, name, resource, query_json, created_at)`.
+    Add CRUD endpoints `GET/POST/DELETE /saved-filters?resource=tasks` in `src/lib/`.
+
+    Frontend (infraportal): in the tasks filter panel, add "Save current filter" button
+    (prompts for name) and a dropdown listing saved filters. Selecting one applies
+    its query params to the URL and refetches. Allow deletion via a trash icon. Persist
+    last-used filter name in localStorage.'
+  repos:
+  - backend-service
+  - infraportal
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: fullstack-features-b32e3ba3
+  dimension: fullstack-features
+  title: Wire SSE live task status updates into tasks list
+  description: 'Subscribe the infraportal tasks list to the event-stream-service SSE
+    hub (channel `tasks`) so that status changes, creations, and deletions performed
+    elsewhere reflect live without polling.
+
+    Create `src/utils/useEventStream.ts` hook that opens an EventSource to the gateway
+    SSE endpoint, auto-reconnects with exponential backoff, and dispatches typed events.
+    In the tasks list, on `task.updated` patch the row in cache; on `task.created`
+    prepend; on `task.deleted` remove. Show a small "Live" indicator dot when connected.
+
+    Ensure backend-service emits these events on mutations by publishing to the event-stream-service
+    (HTTP POST to its ingest endpoint) inside the task mutation handlers.'
+  repos:
+  - infraportal
+  - backend-service
+  - microservices
+  complexity: high
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: fullstack-features-38253194
+  dimension: fullstack-features
+  title: Add async export job flow for tasks (request → poll → download)
+  description: 'Backend (backend-service): add `POST /tasks/export` that creates an
+    export job row (new migration `0011_create_export_jobs.sql` with `id, status,
+    format, filter_json, file_path, created_at`) and returns `{ job_id }`. Spawn a
+    tokio task that runs the existing CSV streaming logic to a tempfile under `/tmp/exports/`
+    and updates status to `done` or `failed`. Add `GET /tasks/export/:job_id` returning
+    status, and `GET /tasks/export/:job_id/download` streaming the file with `Content-Disposition`.
+
+    Frontend (infraportal): in tasks page, add "Export" button that POSTs, shows a
+    progress toast that polls every 1.5s, and triggers a browser download when done.
+    Cancel polling on unmount.'
+  repos:
+  - backend-service
+  - infraportal
+  complexity: high
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: fullstack-features-39c21aad
+  dimension: fullstack-features
+  title: Add drag-and-drop reordering for task list with persisted sort_order
+  description: 'Backend (backend-service): add migration `0011_add_task_sort_order.sql`
+    with `sort_order INTEGER NOT NULL DEFAULT 0`, indexed. Add `PATCH /tasks/reorder`
+    accepting `[{id, sort_order}]` to bulk-update. Default list ordering becomes `sort_order
+    ASC, created_at DESC`.
+
+    Frontend (infraportal): integrate `@dnd-kit/core` (or existing dnd lib if present)
+    on the tasks list rows. On drop, compute new sort_order values (e.g., midpoint
+    between neighbors) and PATCH. Optimistically reorder; rollback on failure with
+    a toast.'
+  repos:
+  - backend-service
+  - infraportal
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
+- id: fullstack-features-fa753a02
+  dimension: fullstack-features
+  title: Build live activity feed page backed by SSE and activities-service
+  description: 'New page `src/pages/ActivityFeed.tsx` in infraportal showing a reverse-chronological
+    feed of recent activities across accounts/contacts/tasks. Initial load fetches
+    last 50 from activities-service `GET /activities?limit=50`; subsequent items stream
+    in via SSE channel `activities`.
+
+    UI: grouped by day, each item shows actor, verb, target, timestamp (relative),
+    and a link to the related entity. Add a filter chip row (type: task | contact
+    | account) that updates query params and resubscribes.
+
+    If activities-service lacks a feed endpoint, add `GET /activities` with `limit`,
+    `cursor`, and `type` filters in `microservices/activities-service/src/`.'
+  repos:
+  - infraportal
+  - microservices
+  complexity: medium
+  status: pending
+  created_at: '2026-04-30'
+  completed_at: null
+  summary: null
