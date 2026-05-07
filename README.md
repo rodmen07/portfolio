@@ -199,3 +199,9 @@ cargo test
 | Sub-version | Feature | Status |
 |-------------|---------|--------|
 | v1.6.0 | observaboard: Fly.io to Cloud Run (remove Celery/Redis, inline classification, port 8080, Cloud Run deploy workflow with migrate job); SOC 2 CC9.2 Terraform (vendor inventory Secret Manager labels, Cloud Run attestation labels, 5xx monitoring alert); portfolio polish (MicroservicesCaseStudyPage tech stack updated, baseline note updated) | ✅ Published |
+
+### v1.7 - CRM Event Pipeline ✅ Complete
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.7.0 | go-gateway mutation observer: intercepts 2xx CRM mutations, fires fire-and-forget ingest events to observaboard; observaboard create_gateway_api_key management command (idempotent); infraportal notification bell source-colored badges | ✅ Published |
