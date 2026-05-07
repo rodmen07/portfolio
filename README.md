@@ -193,3 +193,9 @@ cargo test
 | Sub-version | Feature | Status |
 |-------------|---------|--------|
 | v1.5.0 | backend-service migrated from SQLite (Fly.io) to PostgreSQL on GCP Cloud Run with Cloud SQL; sqlx postgres feature, $N placeholders, RETURNING inserts, BIGSERIAL/BOOLEAN/TIMESTAMPTZ migrations; CRM notification bell (SSE EventSource, auto-reconnect, badge, dropdown panel) | ✅ Published |
+
+### v1.6 - Observability & Compliance ✅ Complete
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.6.0 | observaboard: Fly.io to Cloud Run (remove Celery/Redis, inline classification, port 8080, Cloud Run deploy workflow with migrate job); SOC 2 CC9.2 Terraform (vendor inventory Secret Manager labels, Cloud Run attestation labels, 5xx monitoring alert); portfolio polish (MicroservicesCaseStudyPage tech stack updated, baseline note updated) | ✅ Published |
