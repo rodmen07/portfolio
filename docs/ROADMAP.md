@@ -4,6 +4,42 @@ Shipped versions, most recent first. **Published** means all release locations
 were updated (see `microservices/CLAUDE.md` § Release Locations); the lifecycle
 is **Planned → Implemented → Published**.
 
+## v1.9 — Distributed Tracing & Observability ✅ Complete
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.9.0 | OpenTelemetry integration across all services: W3C traceparent middleware in go-gateway; Cloud Trace exporter in all 11 Rust services + ai-orchestrator (Python); event-stream-service traceparent extraction; rustls-webpki security fix (RUSTSEC-2026-0104) | ✅ Published |
+
+## v1.8 — Real-Time Feedback Loop ✅ Complete
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.8.0 | observaboard event stream: fire-and-forget JWT publishing to event-stream-service; go-gateway CRM mutation observer; real-time event propagation | ✅ Published |
+
+## v1.7 — CRM Event Pipeline ✅ Complete
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.7.0 | go-gateway event interception and observaboard integration; SOURCE_COLORS notification badges | ✅ Published |
+
+## v1.6 — Observability & Compliance ✅ Complete
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.6.0 | observaboard Cloud Run migration; SOC 2 CC9.2 compliance via Terraform | ✅ Published |
+
+## v1.5 — DB Migration & Live Events ✅ Complete
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.5.0 | backend-service SQLite → PostgreSQL migration; real-time SSE CRM notifications | ✅ Published |
+
+## v1.4 — Cloud Consolidation ✅ Complete
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.4.0 | Fly.io → GCP Cloud Run migration (ai-orchestrator, event-stream); keyless OIDC | ✅ Published |
+
 ## v1.3 — Autonomous Operations ✅ Complete
 
 | Sub-version | Feature | Status |
