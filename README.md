@@ -182,8 +182,14 @@ cargo test
 | v1.3.1 | Productionizer agent — Gemini 2.5 Flash autonomous agent runs daily, opens PRs to improve Rust microservices (structured logging, dynamic health checks, error details, audit error handling, test coverage) | ✅ Published |
 | v1.3.2 | Client Portal Dashboard — deliverable effort tracking (estimated hours + burn-down), admin-curated project links (Figma, GitHub, Notion, Loom, custom), progress update feed, Gmail sync agent | ✅ Published |
 
-### v1.4 — Cloud Consolidation 🔄 In Progress
+### v1.4 — Cloud Consolidation ✅ Complete
 
 | Sub-version | Feature | Status |
 |-------------|---------|--------|
 | v1.4.0 | Fly.io to GCP Cloud Run migration — ai-orchestrator-service (Python/FastAPI) and event-stream-service (Go SSE hub) migrated; keyless OIDC replaces static Fly tokens; port normalisation; SHA-pinned image tags; Cloud Migration case study published | ✅ Published |
+
+### v1.5 — DB Migration & Live Events ✅ Complete
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.5.0 | backend-service migrated from SQLite (Fly.io) to PostgreSQL on GCP Cloud Run with Cloud SQL; sqlx postgres feature, $N placeholders, RETURNING inserts, BIGSERIAL/BOOLEAN/TIMESTAMPTZ migrations; CRM notification bell (SSE EventSource, auto-reconnect, badge, dropdown panel) | ✅ Published |
