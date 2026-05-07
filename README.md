@@ -205,3 +205,9 @@ cargo test
 | Sub-version | Feature | Status |
 |-------------|---------|--------|
 | v1.7.0 | go-gateway mutation observer: intercepts 2xx CRM mutations, fires fire-and-forget ingest events to observaboard; observaboard create_gateway_api_key management command (idempotent); infraportal notification bell source-colored badges | ✅ Published |
+
+### v1.8 - Real-Time Feedback Loop ✅ Complete
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.8.0 | observaboard stream_publisher: after classify, POSTs to event-stream-service with short-lived HS256 JWT (2s timeout, swallowed exceptions); deploy workflow wires EVENT_STREAM_URL + EVENT_STREAM_JWT_SECRET; fixes create_gateway_api_key bug; bell badge color split fix | ✅ Published |
