@@ -4,6 +4,12 @@ Shipped versions, most recent first. **Published** means all release locations
 were updated (see `microservices/CLAUDE.md` § Release Locations); the lifecycle
 is **Planned → Implemented → Published**.
 
+## v1.10 — Cost & FinOps ✅ Complete
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.10.0 | Cloud Run min-instance tuning, billing budget alerts, per-service monitoring dashboard, and FinOps operations guide (`docs/FINOPS.md`) | ✅ Published |
+
 ## v1.9 — Distributed Tracing & Observability ✅ Complete
 
 | Sub-version | Feature | Status |
@@ -96,20 +102,20 @@ is **Planned → Implemented → Published**.
 
 ---
 
-## Considered for future versions
+## Planned next (PR-ready)
 
-These are sketches, not commitments. Listed here so contributors and reviewers
-can see the direction.
+These are the next high-signal items that can be executed through normal
+code-and-PR workflow.
 
-- **v1.4 — Cost & FinOps.** Cloud Run min-instance tuning, budget alerts via
-  Terraform, a Grafana dashboard for per-service cost.
-- **v1.5 — Multi-region / HA.** Promote `go-gateway` (or another well-bounded
-  service) to multi-region Cloud Run with a global load balancer; document
-  failover.
-- **v1.6 — Event-driven core.** Replace some HTTP calls with Pub/Sub or NATS;
-  the SSE hub already proves the pattern.
-- **Distributed tracing.** OpenTelemetry → Tempo / Jaeger / Cloud Trace; start
-  by propagating `traceparent` from `go-gateway`.
+- **v1.11.1 — Multi-region / HA for `go-gateway`.** Add Terraform and CI/CD
+  support for `us-south1` + `us-west1`, attach global load balancing, and
+  document failover verification.
+- **v1.11.2 — Read scaling for reporting paths.** Add Cloud SQL read-replica
+  plumbing (Terraform + app config), then route read-heavy queries through the
+  replica path.
+- **v1.11.3 — Event-driven batch path.** Replace one selected synchronous
+  cross-service batch flow with Pub/Sub, including retries, DLQ, tracing, and
+  operational runbook updates.
 - **Shared `infraportal-common` crate** for JWT validation, request-id,
   logging, metrics, and error mapping across the Rust services.
 - **OpenAPI / gRPC contracts.** Publish per-service specs (utoipa for Axum,

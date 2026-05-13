@@ -211,3 +211,23 @@ cargo test
 | Sub-version | Feature | Status |
 |-------------|---------|--------|
 | v1.8.0 | observaboard stream_publisher: after classify, POSTs to event-stream-service with short-lived HS256 JWT (2s timeout, swallowed exceptions); deploy workflow wires EVENT_STREAM_URL + EVENT_STREAM_JWT_SECRET; fixes create_gateway_api_key bug; bell badge color split fix | ✅ Published |
+
+### v1.9 — Distributed Tracing & Observability ✅ Complete
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.9.0 | OpenTelemetry integration across all services: W3C traceparent middleware in go-gateway; Cloud Trace exporter in Rust services + ai-orchestrator; event-stream-service traceparent extraction; rustls-webpki security fix (RUSTSEC-2026-0104) | ✅ Published |
+
+### v1.10 — Cost & FinOps ✅ Complete
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.10.0 | Cloud Run min-instance tuning, billing budget alerts, per-service monitoring dashboard, and FinOps operations guide (`docs/FINOPS.md`) | ✅ Published |
+
+### v1.11 — Next PR-Ready Steps 🛠️ Planned
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.11.1 | Multi-region `go-gateway` on Cloud Run (`us-south1` + `us-west1`) with global load balancer and failover docs | 📝 Planned |
+| v1.11.2 | Cloud SQL read-replica support for read-heavy reporting paths (Terraform + service config + runbook updates) | 📝 Planned |
+| v1.11.3 | Event-driven batch path prototype replacing selected sync HTTP calls with Pub/Sub and retry/observability wiring | 📝 Planned |

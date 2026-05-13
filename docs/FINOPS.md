@@ -67,8 +67,8 @@ terraform apply
 | `spend-service` | **0** | Batch; infrequent queries → scale-to-zero |
 
 **Impact:**
-- **Cost:** 7/12 services at min=0 saves ~$30-50/month (warm instances cost $0.24/month each)
-- **Performance:** 5 services always warm = 0 cold starts on critical paths
+- **Cost:** 5/12 services at min=0 preserve scale-to-zero savings while 7 critical services stay warm (warm instances cost $0.24/month each)
+- **Performance:** 7 services always warm = near-zero cold starts on critical paths
 - **Configuration:** Defined in `terraform/cost_variables.tf` via `service_min_instances` map
 
 **Override defaults:**
