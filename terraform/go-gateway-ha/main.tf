@@ -1,6 +1,6 @@
 locals {
-  primary_region_slug  = replace(var.primary_region, "-", "")
-  failover_region_slug = replace(var.failover_region, "-", "")
+  primary_region_normalized  = replace(var.primary_region, "-", "")
+  failover_region_normalized = replace(var.failover_region, "-", "")
 }
 
 resource "google_compute_global_address" "gateway" {
@@ -8,7 +8,7 @@ resource "google_compute_global_address" "gateway" {
 }
 
 resource "google_compute_region_network_endpoint_group" "primary" {
-  name                  = "${var.name_prefix}-${local.primary_region_slug}-neg"
+  name                  = "${var.name_prefix}-${local.primary_region_normalized}-neg"
   network_endpoint_type = "SERVERLESS"
   region                = var.primary_region
 
@@ -18,7 +18,7 @@ resource "google_compute_region_network_endpoint_group" "primary" {
 }
 
 resource "google_compute_region_network_endpoint_group" "failover" {
-  name                  = "${var.name_prefix}-${local.failover_region_slug}-neg"
+  name                  = "${var.name_prefix}-${local.failover_region_normalized}-neg"
   network_endpoint_type = "SERVERLESS"
   region                = var.failover_region
 

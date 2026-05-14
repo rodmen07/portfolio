@@ -86,7 +86,11 @@ jobs:
               --region="${{ env.GCP_ARTIFACT_REGION }}" \
               --format='value(status.url)' 2>/dev/null || echo ""
           }
-          echo "TASKS_URL=$(get_url backend-service)" >> "$GITHUB_ENV"
+          TASKS_URL="$(get_url task-api-service)"
+          if [ -z "$TASKS_URL" ]; then
+            TASKS_URL="$(get_url backend-service)"
+          fi
+          echo "TASKS_URL=$TASKS_URL" >> "$GITHUB_ENV"
           echo "ACCOUNTS_URL=$(get_url accounts-service)" >> "$GITHUB_ENV"
           echo "CONTACTS_URL=$(get_url contacts-service)" >> "$GITHUB_ENV"
           echo "OPPORTUNITIES_URL=$(get_url opportunities-service)" >> "$GITHUB_ENV"
