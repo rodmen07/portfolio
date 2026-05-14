@@ -27,11 +27,26 @@ resource "google_compute_region_network_endpoint_group" "failover" {
   }
 }
 
+resource "google_compute_health_check" "gateway" {
+  name = "${var.name_prefix}-health"
+
+  check_interval_sec  = 5
+  timeout_sec         = 5
+  healthy_threshold   = 2
+  unhealthy_threshold = 2
+
+  http_health_check {
+    request_path = "/health"
+    port         = 80
+  }
+}
+
 resource "google_compute_backend_service" "gateway" {
   name                  = "${var.name_prefix}-backend"
   protocol              = "HTTP"
   load_balancing_scheme = "EXTERNAL_MANAGED"
   timeout_sec           = 30
+  health_checks         = [google_compute_health_check.gateway.id]
 
   backend {
     group = google_compute_region_network_endpoint_group.primary.id
