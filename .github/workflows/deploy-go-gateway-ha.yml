@@ -1,0 +1,180 @@
+name: Deploy go-gateway (Multi-region HA)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "go-gateway/**"
+      - "terraform/go-gateway-ha/**"
+      - ".github/workflows/deploy-go-gateway-ha.yml"
+  workflow_dispatch:
+
+env:
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  GCP_ARTIFACT_REGION: us-central1
+  SERVICE_NAME: go-gateway
+  IMAGE_NAME: go-gateway
+  PRIMARY_REGION: us-south1
+  FAILOVER_REGION: us-west1
+
+jobs:
+  deploy:
+    name: Deploy and update global load balancer
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository (with submodules)
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Validate deploy configuration
+        id: config
+        run: |
+          if [ -z "${{ env.GCP_PROJECT_ID }}" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping deploy: GCP_PROJECT_ID variable is not set."
+            exit 0
+          fi
+          if [ -z "${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping deploy: GCP_WORKLOAD_IDENTITY_PROVIDER secret is not set."
+            exit 0
+          fi
+          if [ -z "${{ secrets.GCP_SERVICE_ACCOUNT }}" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping deploy: GCP_SERVICE_ACCOUNT secret is not set."
+            exit 0
+          fi
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+      - name: Authenticate to Google Cloud
+        if: steps.config.outputs.enabled == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        if: steps.config.outputs.enabled == 'true'
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Set up Terraform
+        if: steps.config.outputs.enabled == 'true'
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Configure Docker for Artifact Registry
+        if: steps.config.outputs.enabled == 'true'
+        run: gcloud auth configure-docker ${{ env.GCP_ARTIFACT_REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and push image
+        if: steps.config.outputs.enabled == 'true'
+        run: |
+          IMAGE="${{ env.GCP_ARTIFACT_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/microservices/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          docker build -t "$IMAGE" "${{ github.workspace }}/go-gateway"
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Resolve upstream service URLs
+        if: steps.config.outputs.enabled == 'true'
+        run: |
+          get_url() {
+            gcloud run services describe "$1" \
+              --region="${{ env.GCP_ARTIFACT_REGION }}" \
+              --format='value(status.url)' 2>/dev/null || echo ""
+          }
+          echo "TASKS_URL=$(get_url backend-service)" >> "$GITHUB_ENV"
+          echo "ACCOUNTS_URL=$(get_url accounts-service)" >> "$GITHUB_ENV"
+          echo "CONTACTS_URL=$(get_url contacts-service)" >> "$GITHUB_ENV"
+          echo "OPPORTUNITIES_URL=$(get_url opportunities-service)" >> "$GITHUB_ENV"
+          echo "ACTIVITIES_URL=$(get_url activities-service)" >> "$GITHUB_ENV"
+          echo "AUTOMATION_URL=$(get_url automation-service)" >> "$GITHUB_ENV"
+          echo "INTEGRATIONS_URL=$(get_url integrations-service)" >> "$GITHUB_ENV"
+          echo "REPORTING_URL=$(get_url reporting-service)" >> "$GITHUB_ENV"
+          echo "SEARCH_URL=$(get_url search-service)" >> "$GITHUB_ENV"
+          echo "EVENTS_URL=$(get_url observaboard)" >> "$GITHUB_ENV"
+          echo "OBSERVABOARD_URL=$(get_url observaboard)" >> "$GITHUB_ENV"
+
+      - name: Deploy go-gateway to both regions
+        if: steps.config.outputs.enabled == 'true'
+        run: |
+          append_if_set() {
+            local key="$1"
+            local value="$2"
+            if [ -n "$value" ]; then
+              if [ -z "$ENV_VARS" ]; then
+                ENV_VARS="$key=$value"
+              else
+                ENV_VARS="${ENV_VARS},$key=$value"
+              fi
+            fi
+          }
+
+          ENV_VARS=""
+          append_if_set TASKS_URL "$TASKS_URL"
+          append_if_set ACCOUNTS_URL "$ACCOUNTS_URL"
+          append_if_set CONTACTS_URL "$CONTACTS_URL"
+          append_if_set OPPORTUNITIES_URL "$OPPORTUNITIES_URL"
+          append_if_set ACTIVITIES_URL "$ACTIVITIES_URL"
+          append_if_set AUTOMATION_URL "$AUTOMATION_URL"
+          append_if_set INTEGRATIONS_URL "$INTEGRATIONS_URL"
+          append_if_set REPORTING_URL "$REPORTING_URL"
+          append_if_set SEARCH_URL "$SEARCH_URL"
+          append_if_set EVENTS_URL "$EVENTS_URL"
+          append_if_set OBSERVABOARD_URL "$OBSERVABOARD_URL"
+
+          for REGION in "${{ env.PRIMARY_REGION }}" "${{ env.FAILOVER_REGION }}"; do
+            echo "Deploying ${{ env.SERVICE_NAME }} to $REGION"
+            gcloud run deploy "${{ env.SERVICE_NAME }}" \
+              --image "$IMAGE" \
+              --region "$REGION" \
+              --platform managed \
+              --port 8080 \
+              --memory 256Mi \
+              --cpu 1 \
+              --min-instances 0 \
+              --max-instances 3 \
+              --service-account "${{ secrets.GCP_SERVICE_ACCOUNT }}" \
+              ${ENV_VARS:+--set-env-vars "${ENV_VARS}"} \
+              --set-secrets OBSERVABOARD_API_KEY=OBSERVABOARD_API_KEY:latest \
+              --quiet
+
+            gcloud run services add-iam-policy-binding "${{ env.SERVICE_NAME }}" \
+              --region "$REGION" \
+              --member="allUsers" \
+              --role="roles/run.invoker" \
+              --quiet || true
+          done
+
+      - name: Apply Terraform for global load balancer
+        if: steps.config.outputs.enabled == 'true'
+        run: |
+          cd "${{ github.workspace }}/terraform/go-gateway-ha"
+          terraform init -input=false
+          terraform apply -input=false -auto-approve \
+            -var="project_id=${{ env.GCP_PROJECT_ID }}" \
+            -var="service_name=${{ env.SERVICE_NAME }}" \
+            -var="primary_region=${{ env.PRIMARY_REGION }}" \
+            -var="failover_region=${{ env.FAILOVER_REGION }}"
+
+      - name: Smoke test regional health endpoints
+        if: steps.config.outputs.enabled == 'true'
+        run: |
+          for REGION in "${{ env.PRIMARY_REGION }}" "${{ env.FAILOVER_REGION }}"; do
+            URL=$(gcloud run services describe "${{ env.SERVICE_NAME }}" --region "$REGION" --format='value(status.url)')
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${URL}/health" || echo "000")
+            echo "$REGION -> $URL/health => $STATUS"
+            if [ "$STATUS" != "200" ]; then
+              echo "::error::Health check failed in $REGION"
+              exit 1
+            fi
+          done
+
+      - name: Print Terraform outputs
+        if: steps.config.outputs.enabled == 'true'
+        run: |
+          cd "${{ github.workspace }}/terraform/go-gateway-ha"
+          terraform output
