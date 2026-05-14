@@ -38,14 +38,7 @@ resource "google_compute_backend_service" "gateway" {
   }
 
   backend {
-    group    = google_compute_region_network_endpoint_group.failover.id
-    failover = true
-  }
-
-  failover_policy {
-    failover_ratio                        = 0.5
-    disable_connection_drain_on_failover = false
-    drop_traffic_if_unhealthy            = false
+    group = google_compute_region_network_endpoint_group.failover.id
   }
 }
 

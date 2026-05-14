@@ -4,7 +4,7 @@ This runbook validates the `v1.11.1` HA rollout for `go-gateway` with:
 
 - regional Cloud Run deployments in `us-south1` (primary) and `us-west1` (failover)
 - global external HTTP load balancer fronting both regions
-- failover backend policy on the global backend service
+- multi-region backend routing on the global backend service
 
 ## Prerequisites
 
