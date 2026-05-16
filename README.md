@@ -459,11 +459,11 @@ cargo test
 |-------------|---------|--------|
 | v1.9.0 | OpenTelemetry integration across all services: W3C traceparent middleware in go-gateway; Cloud Trace exporter in Rust services + ai-orchestrator; event-stream-service traceparent extraction; rustls-webpki security fix (RUSTSEC-2026-0104) | ✅ Published |
 
-### v1.10 — Cost & FinOps ✅ Complete
+### v1.10 - Gateway Rate Limiting
 
 | Sub-version | Feature | Status |
 |-------------|---------|--------|
-| v1.10.0 | Cloud Run min-instance tuning, billing budget alerts, per-service monitoring dashboard, and FinOps operations guide (`docs/FINOPS.md`) | ✅ Published |
+| v1.10.0 | go-gateway: per-client-IP token-bucket rate limiting with route-tier overrides (auth=5, write=30, read=60 rps); X-RateLimit-Limit/Remaining/Reset headers on every response; Retry-After on 429; X-Forwarded-For support; background entry eviction; 9 unit tests (first in repo) | ✅ Published |
 
 ### v1.11 — Next PR-Ready Steps 🛠️ Planned
 
