@@ -435,11 +435,11 @@ cargo test
 |-------------|---------|--------|
 | v1.5.0 | backend-service migrated from SQLite (Fly.io) to PostgreSQL on GCP Cloud Run with Cloud SQL; sqlx postgres feature, $N placeholders, RETURNING inserts, BIGSERIAL/BOOLEAN/TIMESTAMPTZ migrations; CRM notification bell (SSE EventSource, auto-reconnect, badge, dropdown panel) | ✅ Published |
 
-### v1.6 - Observability & Compliance ✅ Complete
+### v1.6 - Observability & Compliance
 
 | Sub-version | Feature | Status |
 |-------------|---------|--------|
-| v1.6.0 | observaboard: Fly.io to Cloud Run (remove Celery/Redis, inline classification, port 8080, Cloud Run deploy workflow with migrate job); SOC 2 CC9.2 Terraform (vendor inventory Secret Manager labels, Cloud Run attestation labels, 5xx monitoring alert); portfolio polish (MicroservicesCaseStudyPage tech stack updated, baseline note updated) | ✅ Published |
+| v1.6.0 | observaboard: celery.py removed; google-cloud-tasks+google-auth added; `enqueue_classify_task()` dispatches HTTP Cloud Tasks with OIDC; `ClassifyCallbackView` callback endpoint with OIDC verification; dev fallback to inline classify; 4 new callback tests; deploy workflow passes Cloud Tasks env vars. SOC 2 CC9.2: standalone `terraform/soc2-cc9-vendor-risk/` module (GCS evidence bucket + versioning + 2-yr retention, BigQuery vendor registry table, Pub/Sub topic, quarterly Cloud Scheduler review reminder). | ✅ Published |
 
 ### v1.7 - CRM Event Pipeline ✅ Complete
 
