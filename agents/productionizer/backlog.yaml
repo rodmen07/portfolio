@@ -191,23 +191,15 @@ tasks:
 - id: frontend-components-d2c9522a
   dimension: frontend-components
   title: Add reusable Badge and StatusChip primitives
-  description: 'Create `src/features/ui/Badge.tsx` and `src/features/ui/StatusChip.tsx`
-    as reusable primitives.
-
-    Badge should accept `variant` ("default" | "info" | "success" | "warning" | "danger"
-    | "neutral"),
-
-    `size` ("sm" | "md"), and optional `dot` boolean for a leading status dot. StatusChip
-    wraps Badge
-
-    with a status-to-variant map (e.g., "running"→success, "pending"→warning, "failed"→danger,
-
-    "stopped"→neutral) and accepts `status: string` plus optional `label` override.
-
-    Use Tailwind classes consistent with existing styles in `src/index.css`. Export
-    from a new
-
-    `src/features/ui/index.ts` barrel. Add a basic Vitest test for variant class application.'
+  description: "Create `src/features/ui/Badge.tsx` and `src/features/ui/StatusChip.tsx`\
+    \ as reusable primitives.\nBadge should accept `variant` (\"default\" | \"info\"\
+    \ | \"success\" | \"warning\" | \"danger\" | \"neutral\"),\n`size` (\"sm\" | \"\
+    md\"), and optional `dot` boolean for a leading status dot. StatusChip wraps Badge\n\
+    with a status-to-variant map (e.g., \"running\"\u2192success, \"pending\"\u2192\
+    warning, \"failed\"\u2192danger,\n\"stopped\"\u2192neutral) and accepts `status:\
+    \ string` plus optional `label` override.\nUse Tailwind classes consistent with\
+    \ existing styles in `src/index.css`. Export from a new\n`src/features/ui/index.ts`\
+    \ barrel. Add a basic Vitest test for variant class application."
   repos:
   - infraportal
   complexity: low
@@ -249,26 +241,16 @@ tasks:
 - id: frontend-components-5add6b4f
   dimension: frontend-components
   title: 'Implement DataTable enhancements: sorting, selection, and CSV export'
-  description: 'Locate the existing table implementation under `src/features/` (or
-    create `src/features/table/DataTable.tsx`
-
-    if missing). Add: (1) column sorting—click header to cycle asc/desc/none with
-    sort icon; accept
-
-    `sortable` per column and a `sortAccessor` function. (2) Row selection with header
-    checkbox
-
-    (select-all on current page), per-row checkbox, and `onSelectionChange(ids)` callback;
-
-    maintain selected state via `Set<string>`. (3) Inline row actions slot (`renderRowActions(row)`)
-
-    rendered in a sticky-right column. (4) Export selected (or all if none selected)
-    to CSV via
-
-    a helper `src/utils/csv.ts` exposing `toCSV(rows, columns)` and `downloadCSV(filename,
-    csv)`.
-
-    Update one consuming page in `src/pages/` to demonstrate.'
+  description: "Locate the existing table implementation under `src/features/` (or\
+    \ create `src/features/table/DataTable.tsx`\nif missing). Add: (1) column sorting\u2014\
+    click header to cycle asc/desc/none with sort icon; accept\n`sortable` per column\
+    \ and a `sortAccessor` function. (2) Row selection with header checkbox\n(select-all\
+    \ on current page), per-row checkbox, and `onSelectionChange(ids)` callback;\n\
+    maintain selected state via `Set<string>`. (3) Inline row actions slot (`renderRowActions(row)`)\n\
+    rendered in a sticky-right column. (4) Export selected (or all if none selected)\
+    \ to CSV via\na helper `src/utils/csv.ts` exposing `toCSV(rows, columns)` and\
+    \ `downloadCSV(filename, csv)`.\nUpdate one consuming page in `src/pages/` to\
+    \ demonstrate."
   repos:
   - infraportal
   complexity: medium
@@ -338,32 +320,23 @@ tasks:
 - id: frontend-components-cdebc7a1
   dimension: frontend-components
   title: Create global keyboard shortcut system with help overlay
-  description: 'Add `src/features/shortcuts/useShortcut.ts` hook and `ShortcutProvider`
-    context in
-
-    `src/features/shortcuts/ShortcutProvider.tsx`. The hook registers `{keys: ''g
-    h'', description, scope}`
-
-    with support for single keys, modifier combos (mod+k), and chord sequences with
-    a 1s timeout.
-
-    Ignore inputs/textareas/contenteditable unless `allowInInput` is true. Provider
-    tracks all
-
-    registered shortcuts and exposes a `?` (Shift+/) overlay component `ShortcutsHelp.tsx`
-    that
-
-    lists shortcuts grouped by `scope`. Wire provider in `src/App.tsx`. Include demo:
-    register
-
-    `g d` → navigate dashboard, `g s` → settings.'
+  description: "Add `src/features/shortcuts/useShortcut.ts` hook and `ShortcutProvider`\
+    \ context in\n`src/features/shortcuts/ShortcutProvider.tsx`. The hook registers\
+    \ `{keys: 'g h', description, scope}`\nwith support for single keys, modifier\
+    \ combos (mod+k), and chord sequences with a 1s timeout.\nIgnore inputs/textareas/contenteditable\
+    \ unless `allowInInput` is true. Provider tracks all\nregistered shortcuts and\
+    \ exposes a `?` (Shift+/) overlay component `ShortcutsHelp.tsx` that\nlists shortcuts\
+    \ grouped by `scope`. Wire provider in `src/App.tsx`. Include demo: register\n\
+    `g d` \u2192 navigate dashboard, `g s` \u2192 settings."
   repos:
   - infraportal
   complexity: medium
-  status: pending
+  status: completed
   created_at: '2026-04-30'
-  completed_at: null
-  summary: null
+  completed_at: '2026-05-16T09:14:00.086385'
+  summary: Created keyboard shortcuts system with useShortcut hook, ShortcutProvider
+    context, and ShortcutsHelp overlay. Supports chord sequences (g d, g s), modifier
+    combos (mod+k), proper event handling in editable elements, and keyboard navigation.
 - id: frontend-components-16783c88
   dimension: frontend-components
   title: Polish toast notification system with queue, actions, and promise API
@@ -421,28 +394,19 @@ tasks:
 - id: backend-new-features-7ba218ed
   dimension: backend-new-features
   title: Add bulk task operations endpoint to backend-service
-  description: 'Add `POST /tasks/bulk` to backend-service supporting batch create,
-    update, and delete actions in a single request with partial-success semantics.
-
-
-    Files to modify:
-
-    - `src/lib/` — add a new `bulk.rs` module with handlers `bulk_tasks` accepting
-    a JSON payload like `{ "operations": [{ "op": "create|update|delete", "data":
-    {...}, "id": "..." }] }`.
-
-    - `src/lib.rs` or router setup — register the new route under the existing tasks
-    scope.
-
-    - `tests/api_tasks.rs` — add integration tests covering all-success, mixed success/failure,
-    and validation error cases.
-
-
-    Response shape: `{ "results": [{ "index": 0, "status": "ok|error", "id": "...",
-    "error": "..." }], "succeeded": N, "failed": M }` with HTTP 207-style multi-status
-    (return 200 with per-item status). Cap the number of operations at 100 per request
-    and return 400 if exceeded. Wrap each operation in its own transaction so one
-    failure does not abort others.'
+  description: "Add `POST /tasks/bulk` to backend-service supporting batch create,\
+    \ update, and delete actions in a single request with partial-success semantics.\n\
+    \nFiles to modify:\n- `src/lib/` \u2014 add a new `bulk.rs` module with handlers\
+    \ `bulk_tasks` accepting a JSON payload like `{ \"operations\": [{ \"op\": \"\
+    create|update|delete\", \"data\": {...}, \"id\": \"...\" }] }`.\n- `src/lib.rs`\
+    \ or router setup \u2014 register the new route under the existing tasks scope.\n\
+    - `tests/api_tasks.rs` \u2014 add integration tests covering all-success, mixed\
+    \ success/failure, and validation error cases.\n\nResponse shape: `{ \"results\"\
+    : [{ \"index\": 0, \"status\": \"ok|error\", \"id\": \"...\", \"error\": \"...\"\
+    \ }], \"succeeded\": N, \"failed\": M }` with HTTP 207-style multi-status (return\
+    \ 200 with per-item status). Cap the number of operations at 100 per request and\
+    \ return 400 if exceeded. Wrap each operation in its own transaction so one failure\
+    \ does not abort others."
   repos:
   - backend-service
   complexity: medium
@@ -780,7 +744,7 @@ tasks:
   summary: null
 - id: fullstack-features-38253194
   dimension: fullstack-features
-  title: Add async export job flow for tasks (request → poll → download)
+  title: "Add async export job flow for tasks (request \u2192 poll \u2192 download)"
   description: 'Backend (backend-service): add `POST /tasks/export` that creates an
     export job row (new migration `0011_create_export_jobs.sql` with `id, status,
     format, filter_json, file_path, created_at`) and returns `{ job_id }`. Spawn a
