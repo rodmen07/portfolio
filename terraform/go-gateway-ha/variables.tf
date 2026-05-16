@@ -26,3 +26,9 @@ variable "name_prefix" {
   type        = string
   default     = "go-gateway-ha"
 }
+
+variable "domain" {
+  description = "Custom domain for the managed SSL certificate (e.g. api.example.com). Leave empty to use HTTP only."
+  type        = string
+  default     = ""
+}

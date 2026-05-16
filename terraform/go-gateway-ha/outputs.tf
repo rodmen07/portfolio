@@ -4,8 +4,13 @@ output "global_ip" {
 }
 
 output "http_endpoint" {
-  description = "HTTP endpoint for the global load balancer."
+  description = "HTTP endpoint. Redirects to HTTPS when var.domain is set."
   value       = "http://${google_compute_global_address.gateway.address}"
+}
+
+output "https_endpoint" {
+  description = "HTTPS endpoint (only populated when var.domain is set)."
+  value       = local.has_domain ? "https://${var.domain}" : null
 }
 
 output "regional_backends" {

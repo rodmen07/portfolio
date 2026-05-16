@@ -465,10 +465,10 @@ cargo test
 |-------------|---------|--------|
 | v1.10.0 | go-gateway: per-client-IP token-bucket rate limiting with route-tier overrides (auth=5, write=30, read=60 rps); X-RateLimit-Limit/Remaining/Reset headers on every response; Retry-After on 429; X-Forwarded-For support; background entry eviction; 9 unit tests (first in repo) | ✅ Published |
 
-### v1.11 — Next PR-Ready Steps 🛠️ Planned
+### v1.11 - Multi-Region HA, Cloud SQL Read Replica & Pub/Sub Ingest
 
 | Sub-version | Feature | Status |
 |-------------|---------|--------|
-| v1.11.1 | Multi-region `go-gateway` on Cloud Run (`us-south1` + `us-west1`) with global load balancer and failover docs | 📝 Planned |
-| v1.11.2 | Cloud SQL read-replica support for read-heavy reporting paths (Terraform + service config + runbook updates) | 📝 Planned |
-| v1.11.3 | Event-driven batch path prototype replacing selected sync HTTP calls with Pub/Sub and retry/observability wiring | 📝 Planned |
+| v1.11.1 | Multi-region `go-gateway` on Cloud Run (`us-south1` + `us-west1`) behind a GCP global HTTPS LB with serverless NEGs, optional managed SSL cert, and HTTP-to-HTTPS redirect (invalid health-check removed) | ✅ Published |
+| v1.11.2 | Cloud SQL cross-region read replica - Terraform module + `DATABASE_REPLICA_URL` support wired into `reporting-service` and `search-service` (split write/read pools, migrations on primary only) | ✅ Published |
+| v1.11.3 | Event-driven batch path - `terraform/pubsub-ingest` module (topic, push subscription, dead-letter, IAM) + go-gateway observer updated to publish CRM mutations to Pub/Sub via REST API with metadata-server token caching | ✅ Published |
