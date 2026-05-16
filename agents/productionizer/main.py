@@ -4,7 +4,7 @@ Productionizer agent — single task executor.
 Each invocation:
   1. Picks the next pending task from backlog.yaml (or uses FORCE_TASK_ID)
   2. Creates git branches in all affected repos
-  3. Runs the Claude agentic loop (reads/writes files via tools)
+  3. Runs the agentic loop with configured LLM (Claude or GPT) reading/writing files via tools
   4. Verifies each affected repo with its language-appropriate verification command
   5. On success: commits changes, writes .productionizer-output.json
   6. Updates task status in backlog.yaml
@@ -16,8 +16,20 @@ Exit codes:
   3 = backlog empty; stop the loop
 
 Usage:
-  ANTHROPIC_API_KEY=...  python main.py
-  ANTHROPIC_API_KEY=...  FORCE_TASK_ID=frontend-ui-ux-abc12345  python main.py
+  # Using GPT-4o Mini (default, cheapest)
+  OPENAI_API_KEY=...  python main.py
+  
+  # Using Claude Haiku
+  ANTHROPIC_API_KEY=...  LLM_MODEL=claude-haiku-4-5-20251001  python main.py
+  
+  # Force a specific task
+  OPENAI_API_KEY=...  FORCE_TASK_ID=frontend-ui-ux-abc12345  python main.py
+
+Environment variables:
+  OPENAI_API_KEY          — Required for GPT models
+  ANTHROPIC_API_KEY       — Required for Claude models
+  LLM_MODEL               — Model to use (default: gpt-4o-mini)
+  FORCE_TASK_ID           — Force execution of specific task ID
 """
 from __future__ import annotations
 
@@ -28,9 +40,11 @@ import os
 import pathlib
 import subprocess
 import sys
+import time
 
-import anthropic
+from llm_client import UnifiedLLMClient
 
+from observability import Observability, TaskMetrics
 from prompts import build_system_prompt, build_task_prompt
 from repos import REPOS
 from tasks import Task, load_backlog, save_backlog, pick_next_task
@@ -51,7 +65,9 @@ EXIT_ERROR     = 1
 EXIT_SKIP      = 2
 EXIT_DONE      = 3
 
-AGENT_MODEL = "claude-haiku-4-5-20251001"
+# Model selection (can be overridden via LLM_MODEL env var)
+# Options: "gpt-4o-mini" (recommended, cheapest), "claude-haiku-3-5-sonnet-20241022", etc.
+AGENT_MODEL = os.environ.get("LLM_MODEL", "gpt-4o-mini")
 
 
 # ---------------------------------------------------------------------------
@@ -158,16 +174,13 @@ def verify_repo(repo_name: str) -> tuple[bool, str]:
 # Claude agentic loop
 # ---------------------------------------------------------------------------
 
-def agent_loop(task: Task) -> str | None:
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        log.error("ANTHROPIC_API_KEY not set")
-        return None
-
+def agent_loop(task: Task, metrics: TaskMetrics) -> str | None:
     model = AGENT_MODEL
     log.info("Model: %s", model)
 
-    client = anthropic.Anthropic(api_key=api_key)
+    client = UnifiedLLMClient(model)
+    log.info("Provider: %s", client.provider)
+    
     dispatch = make_dispatch()
     system_prompt = build_system_prompt(task.repos)
     user_prompt = build_task_prompt(task)
@@ -176,19 +189,25 @@ def agent_loop(task: Task) -> str | None:
     summary: str | None = None
 
     for round_num in range(MAX_TOOL_ROUNDS):
-        response = client.messages.create(
-            model=model,
-            max_tokens=8096,
+        response = client.create_message(
             system=system_prompt,
-            tools=TOOL_DEFINITIONS,
             messages=messages,
+            tools=TOOL_DEFINITIONS if TOOL_DEFINITIONS else None,
+            max_tokens=8096,
         )
+
+        # Track token usage
+        metrics.input_tokens += response.input_tokens
+        metrics.output_tokens += response.output_tokens
 
         messages.append({"role": "assistant", "content": response.content})
 
         if response.stop_reason == "end_turn":
             for block in response.content:
-                if hasattr(block, "text") and block.text.strip():
+                if isinstance(block, dict) and block.get("type") == "text" and block.get("text"):
+                    summary = block["text"].strip()
+                    break
+                elif hasattr(block, "text") and block.text and block.text.strip():
                     summary = block.text.strip()
                     break
             log.info("Agent concluded after %d rounds", round_num + 1)
@@ -200,21 +219,31 @@ def agent_loop(task: Task) -> str | None:
 
         tool_results = []
         for block in response.content:
-            if block.type != "tool_use":
+            block_type = block.get("type") if isinstance(block, dict) else getattr(block, "type", None)
+            if block_type != "tool_use":
                 continue
-            fn_name = block.name
-            fn_args = dict(block.input) if block.input else {}
+            
+            fn_name = block.get("name") if isinstance(block, dict) else getattr(block, "name", None)
+            fn_input = block.get("input") if isinstance(block, dict) else getattr(block, "input", {})
+            fn_args = dict(fn_input) if fn_input else {}
+            block_id = block.get("id") if isinstance(block, dict) else getattr(block, "id", None)
+            
             log.info("  [%d] %s(%s)", round_num + 1, fn_name, list(fn_args.keys()))
 
+            success = True
             try:
                 result_text = dispatch[fn_name](fn_args) if fn_name in dispatch else f"ERROR: unknown tool '{fn_name}'"
+                if result_text.startswith("ERROR"):
+                    success = False
             except Exception as exc:
                 result_text = f"ERROR: {fn_name} raised {exc}"
+                success = False
 
+            metrics.record_tool_call(fn_name, success)
             log.debug("  result: %.300s", result_text)
             tool_results.append({
                 "type": "tool_result",
-                "tool_use_id": block.id,
+                "tool_use_id": block_id,
                 "content": result_text,
             })
 
@@ -262,6 +291,7 @@ def write_output(task: Task, branch: str, affected_repos: list[str], summary: st
 # ---------------------------------------------------------------------------
 
 def main() -> None:
+    obs = Observability(model=AGENT_MODEL)
     backlog = load_backlog()
 
     force_id = os.environ.get("FORCE_TASK_ID", "").strip()
@@ -299,8 +329,13 @@ def main() -> None:
     task.status = "in_progress"
     save_backlog(backlog)
 
+    # Create metrics tracker for this task
+    metrics = obs.start_task(task.id, task.title)
+    start_time = time.time()
+    exit_code = EXIT_ERROR
+
     try:
-        summary = agent_loop(task)
+        summary = agent_loop(task, metrics)
 
         affected_repos = [r for r in task.repos if has_changes(r)]
 
@@ -309,65 +344,106 @@ def main() -> None:
             task.status = "skipped"
             task.completed_at = datetime.datetime.now(datetime.UTC).isoformat()
             save_backlog(backlog)
-            sys.exit(EXIT_SKIP)
-
-        if summary and summary.upper().startswith("SKIP:"):
+            exit_code = EXIT_SKIP
+        elif summary and summary.upper().startswith("SKIP:"):
             log.info("Agent reported already satisfied: %s", summary)
             revert_all(task.repos)
             task.status = "skipped"
             task.completed_at = datetime.datetime.now(datetime.UTC).isoformat()
             save_backlog(backlog)
-            sys.exit(EXIT_SKIP)
+            exit_code = EXIT_SKIP
+        else:
+            if not summary:
+                summary = f"Completed: {task.title}"
 
-        if not summary:
-            summary = f"Completed: {task.title}"
+            verification_ok = True
+            for repo_name in affected_repos:
+                ok, error_msg = verify_repo(repo_name)
+                metrics.record_verification(ok, error_msg)
+                if not ok:
+                    verification_ok = False
+                    break
 
-        for repo_name in affected_repos:
-            ok, _ = verify_repo(repo_name)
-            if not ok:
+            if not verification_ok:
                 revert_all(task.repos)
                 task.status = "skipped"
                 task.completed_at = datetime.datetime.now(datetime.UTC).isoformat()
                 save_backlog(backlog)
-                sys.exit(EXIT_SKIP)
+                exit_code = EXIT_SKIP
+            else:
+                for repo_name in affected_repos:
+                    if not commit_changes(repo_name, task):
+                        revert_all(task.repos)
+                        exit_code = EXIT_ERROR
+                        break
 
-        for repo_name in affected_repos:
-            if not commit_changes(repo_name, task):
-                revert_all(task.repos)
-                sys.exit(EXIT_ERROR)
-
-        write_output(task, branch, affected_repos, summary)
-
-        task.status = "done"
-        task.completed_at = datetime.datetime.now(datetime.UTC).isoformat()
-        task.summary = summary
-        save_backlog(backlog)
-        log.info("Done: %s", task.title)
+                if exit_code != EXIT_ERROR:
+                    write_output(task, branch, affected_repos, summary)
+                    task.status = "done"
+                    task.completed_at = datetime.datetime.now(datetime.UTC).isoformat()
+                    task.summary = summary
+                    save_backlog(backlog)
+                    log.info("Done: %s", task.title)
+                    exit_code = EXIT_COMMITTED
 
     except subprocess.CalledProcessError as exc:
         log.exception("Git command failed: %s", exc.stderr)
         revert_all(task.repos)
         task.status = "pending"
         save_backlog(backlog)
-        sys.exit(EXIT_ERROR)
+        metrics.record_error("git_error", str(exc.stderr)[:500])
+        exit_code = EXIT_ERROR
 
     except Exception as exc:
-        is_transient = (
-            isinstance(exc, anthropic.APIStatusError) and exc.status_code >= 500
-        ) or isinstance(exc, anthropic.RateLimitError)
+        # Detect transient errors for both providers
+        is_transient = False
+        
+        # Anthropic errors
+        try:
+            import anthropic
+            is_transient = (
+                isinstance(exc, anthropic.APIStatusError) and exc.status_code >= 500
+            ) or isinstance(exc, anthropic.RateLimitError)
+        except ImportError:
+            pass
+        
+        # OpenAI errors
+        try:
+            import openai
+            is_transient = (
+                isinstance(exc, openai.APIStatusError) and exc.status_code >= 500
+            ) or isinstance(exc, openai.RateLimitError)
+        except ImportError:
+            pass
 
         if is_transient:
             log.warning("Transient API error — will retry next run: %s", exc)
             revert_all(task.repos)
             task.status = "pending"
             save_backlog(backlog)
-            sys.exit(EXIT_SKIP)
+            metrics.record_error("transient_api_error", str(exc))
+            exit_code = EXIT_SKIP
+        else:
+            log.exception("Unexpected error: %s", exc)
+            revert_all(task.repos)
+            task.status = "pending"
+            save_backlog(backlog)
+            metrics.record_error("unexpected_error", str(exc)[:500])
+            exit_code = EXIT_ERROR
 
-        log.exception("Unexpected error: %s", exc)
-        revert_all(task.repos)
-        task.status = "pending"
-        save_backlog(backlog)
-        sys.exit(EXIT_ERROR)
+    finally:
+        # Record metrics and save observability
+        elapsed = time.time() - start_time
+        obs.record_task_complete(
+            metrics,
+            exit_code,
+            elapsed,
+            metrics.input_tokens,
+            metrics.output_tokens,
+        )
+        obs.save()
+
+    sys.exit(exit_code)
 
 
 if __name__ == "__main__":

@@ -24,7 +24,7 @@ tasks:
   repos:
   - infraportal
   complexity: medium
-  status: pending
+  status: in_progress
   created_at: '2026-04-30'
   completed_at: null
   summary: null
@@ -47,7 +47,7 @@ tasks:
   repos:
   - infraportal
   complexity: medium
-  status: pending
+  status: in_progress
   created_at: '2026-04-30'
   completed_at: null
   summary: null
@@ -66,7 +66,7 @@ tasks:
   repos:
   - infraportal
   complexity: medium
-  status: pending
+  status: in_progress
   created_at: '2026-04-30'
   completed_at: null
   summary: null
@@ -87,7 +87,7 @@ tasks:
   repos:
   - infraportal
   complexity: medium
-  status: pending
+  status: in_progress
   created_at: '2026-04-30'
   completed_at: null
   summary: null
@@ -111,9 +111,9 @@ tasks:
   repos:
   - infraportal
   complexity: medium
-  status: pending
+  status: skipped
   created_at: '2026-04-30'
-  completed_at: null
+  completed_at: '2026-05-01T12:02:47.625349+00:00'
   summary: null
 - id: frontend-ui-ux-ca846dca
   dimension: frontend-ui-ux
@@ -134,9 +134,9 @@ tasks:
   repos:
   - infraportal
   complexity: medium
-  status: pending
+  status: skipped
   created_at: '2026-04-30'
-  completed_at: null
+  completed_at: '2026-05-01T12:07:07.612899+00:00'
   summary: null
 - id: frontend-ui-ux-13335e22
   dimension: frontend-ui-ux
@@ -159,9 +159,9 @@ tasks:
   repos:
   - infraportal
   complexity: medium
-  status: pending
+  status: skipped
   created_at: '2026-04-30'
-  completed_at: null
+  completed_at: '2026-05-01T12:12:43.584017+00:00'
   summary: null
 - id: frontend-ui-ux-4905becb
   dimension: frontend-ui-ux
@@ -184,9 +184,9 @@ tasks:
   repos:
   - infraportal
   complexity: medium
-  status: pending
+  status: skipped
   created_at: '2026-04-30'
-  completed_at: null
+  completed_at: '2026-05-01T12:36:21.148065+00:00'
   summary: null
 - id: frontend-components-d2c9522a
   dimension: frontend-components
@@ -211,9 +211,9 @@ tasks:
   repos:
   - infraportal
   complexity: low
-  status: pending
+  status: skipped
   created_at: '2026-04-30'
-  completed_at: null
+  completed_at: '2026-05-01T12:42:00.504060+00:00'
   summary: null
 - id: frontend-components-8275638b
   dimension: frontend-components
@@ -242,9 +242,9 @@ tasks:
   repos:
   - infraportal
   complexity: medium
-  status: pending
+  status: skipped
   created_at: '2026-04-30'
-  completed_at: null
+  completed_at: '2026-05-01T12:47:23.339705+00:00'
   summary: null
 - id: frontend-components-5add6b4f
   dimension: frontend-components
@@ -272,9 +272,9 @@ tasks:
   repos:
   - infraportal
   complexity: medium
-  status: pending
+  status: skipped
   created_at: '2026-04-30'
-  completed_at: null
+  completed_at: '2026-05-01T13:45:24.979704+00:00'
   summary: null
 - id: frontend-components-13ec585a
   dimension: frontend-components
@@ -302,9 +302,9 @@ tasks:
   repos:
   - infraportal
   complexity: medium
-  status: pending
+  status: skipped
   created_at: '2026-04-30'
-  completed_at: null
+  completed_at: '2026-05-01T13:49:40.686878+00:00'
   summary: null
 - id: frontend-components-e7eb02d3
   dimension: frontend-components
@@ -331,9 +331,9 @@ tasks:
   repos:
   - infraportal
   complexity: medium
-  status: pending
+  status: skipped
   created_at: '2026-04-30'
-  completed_at: null
+  completed_at: '2026-05-01T13:57:37.858846+00:00'
   summary: null
 - id: frontend-components-cdebc7a1
   dimension: frontend-components

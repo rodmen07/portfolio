@@ -2,49 +2,290 @@
 
 # Portfolio
 
-Production-grade cloud engineering projects in Rust, Python, TypeScript, Go,
-and Terraform across AWS and GCP.
+Production-grade cloud engineering portfolio in Rust, Python, TypeScript, Go, and Terraform across AWS and GCP. An umbrella repository showcasing microservices architecture, DevOps patterns, autonomous agents, and infrastructure-as-code.
 
 **Live site:** https://rodmen07.github.io/infraportal/
 
-## Highlights
+---
 
-- **InfraPortal** — 11-service CRM platform on GCP Cloud Run with PostgreSQL,
-  JWT auth, and an LLM-backed planner (Claude + Gemini). React 19 client
-  portal with GitHub + Google OAuth.
-- **SOC 2 baseline** — cloud-agnostic Terraform module implementing 9 SOC 2
-  Type II controls on both GCP and AWS.
-- **Multi-environment CI/CD template** — GitHub Actions reference with
-  OIDC-only credentials, manual approval gates, and automated rollback on
-  GCP Cloud Run / AWS ECS.
-- **Observaboard** — Django 5 + Celery webhook ingestion API with
-  PostgreSQL full-text search and dual JWT / API-key auth.
-- **DynamoDB medallion pipeline** — Rust + Go prototype showing
-  exactly-once cloud-audit-log delivery via single-table conditional writes,
-  with a live admin dashboard.
-- **Productionizer agent** — Gemini 2.5 Flash autonomous agent that opens
-  daily PRs improving the Rust microservices.
+## Overview
+
+### What This Is
+
+A multi-service cloud platform with production-grade patterns:
+
+- **InfraPortal** — 11-service CRM platform on GCP Cloud Run with PostgreSQL, JWT auth, and an LLM-backed planner (Claude + Gemini). React 19 client portal with GitHub + Google OAuth.
+- **SOC 2 baseline** — Cloud-agnostic Terraform module implementing 9 SOC 2 Type II controls on both GCP and AWS.
+- **Multi-environment CI/CD** — GitHub Actions reference with OIDC-only credentials, manual approval gates, and automated rollback.
+- **Observaboard** — Django 5 + Celery webhook ingestion with PostgreSQL full-text search and dual JWT/API-key auth.
+- **DynamoDB medallion pipeline** — Rust + Go prototype showing exactly-once cloud-audit-log delivery.
+
+### Key Technologies
+
+- **Rust/Axum** — 11 microservices (accounts, contacts, activities, automation, integrations, opportunities, reporting, search, audit, projects, spend)
+- **Python/FastAPI** — auth-service (JWT + OAuth), ai-orchestrator (Claude + Gemini), observaboard (Django + Celery)
+- **Go** — API gateway (Cloud Run), event-stream service (SSE), DynamoDB pipeline components
+- **React 19 + TypeScript + Vite** — Frontend (GitHub Pages)
+- **Terraform** — SOC 2 baseline, infrastructure-as-code
+
+---
+
+## Quick Start
+
+```bash
+git clone --recurse-submodules https://github.com/rodmen07/portfolio.git
+cd portfolio
+
+# Setup
+git submodule update --init --recursive
+cp .env.example .env          # fill AUTH_JWT_SECRET + provider keys
+
+# Test & lint
+just test                      # workspace runner (writes test_results.json)
+just lint                      # pre-commit on all files
+just lint-staged               # pre-commit on staged files only
+```
+
+Or without `just`:
+
+```bash
+bash ./run_workspace_tests.sh  # cross-repo workspace checks
+```
+
+Toolchain versions are pinned in [`.devcontainer/`](./.devcontainer/) for VS Code / Codespaces.
+
+---
+
+## Repository Structure
+
+```
+portfolio/
+├── microservices/              # Rust service workspace (git submodule)
+│   ├── <service>/              # 11 services (see below)
+│   ├── terraform-soc2-baseline/# SOC 2 Terraform controls
+│   ├── CLAUDE.md               # ← Rust/Axum patterns, auth, DB, CI detail
+│   └── .github/workflows/
+│       ├── rust.yml            # Primary CI
+│       └── deploy-pipeline.yml # Multi-env promotion template
+├── backend-service/            # task-api (Rust/Axum, Fly.io)
+├── go-gateway/                 # Go API gateway (GCP Cloud Run)
+├── projects-service/           # Client portal data (Rust/Axum)
+├── auth-service/               # Python/FastAPI JWT + OAuth
+├── ai-orchestrator-service/    # Python/FastAPI, Claude + Gemini
+├── event-stream-service/       # Go SSE hub (Fly.io)
+├── infraportal/                # React 19 + Vite (GitHub Pages)
+├── observaboard/               # Django 5 + Celery webhooks
+├── dynamodb_prototype/         # Rust + Go medallion pipeline
+├── agents/
+│   ├── productionizer/         # Archived: Gemini 2.5 autonomous agent
+│   └── gmail-sync/
+├── services.yaml               # ← Machine-readable service inventory
+├── docs/ARCHITECTURE.md        # Long-form architecture reference
+├── docs/CONTRIBUTING.md        # Submodule workflow + local dev
+├── docs/ROADMAP.md             # Release history
+├── justfile                    # Task runner
+└── .devcontainer/              # VS Code / Codespaces
+```
+
+`services.yaml` is authoritative. When `docs/ARCHITECTURE.md` disagrees with it, the YAML wins.
+
+---
+
+## Architecture
+
+```
+React 19 / Vite UI (GitHub Pages: infraportal)
+        │
+   Go API Gateway  ←  rate limiting, reverse proxy
+        │
+  task-api (Rust)  ── Python AI Orchestrator (Claude + Gemini)
+        │
+  Domain services (Rust/Axum, Cloud SQL PostgreSQL):
+  accounts · contacts · activities · automation · integrations
+  opportunities · reporting · search · audit · projects
+        │
+  auth-service (Python JWT, GitHub + Google OAuth)
+  event-stream-service (Go SSE, ring-buffer replay)
+```
+
+**Deployment:** GCP Cloud Run (us-central1) for most services; Fly.io for task-api, ai-orchestrator, event-stream, observaboard. Cloud SQL instance: `microservices-489413:us-south1:microservices-pg`.
+
+---
+
+## Development
+
+### Common Commands
+
+```bash
+# Workspace setup & management
+git submodule update --init --recursive
+just init       # = git submodule update --init --recursive
+just update     # Update all submodules to latest configured commits
+just status     # Show submodule status
+
+# Test & lint
+just test                   # Cross-repo workspace runner
+just lint                   # Pre-commit on all files
+just lint-staged            # Pre-commit on staged files only
+
+# Per-service Rust test
+just rust-test <service>    # e.g. just rust-test reporting-service
+# Without just:
+cd microservices/<service>
+AUTH_JWT_SECRET=dev-insecure-secret-change-me \
+  TEST_DATABASE_URL=sqlite::memory: \
+  cargo test
+
+# Docker runner image (used by CI)
+just build-runner-image
+```
+
+### Submodule Workflow
+
+```bash
+# Bump a single submodule pointer
+cd <submodule>
+git pull origin main
+cd ..
+git add <submodule>
+git commit -m "Update <submodule> pointer"
+```
+
+### Coding Style & Naming
+
+Use repo formatters/linters before opening a PR:
+
+- **Rust:** `cargo fmt`, `cargo clippy -- -D warnings`
+- **Python:** `ruff`
+- **Go:** `gofmt`
+- **Terraform:** `terraform fmt`
+- **JavaScript/TypeScript:** `prettier`
+
+Pre-commit hooks run these automatically (via `just lint`).
+
+Language-native naming conventions:
+- **Rust:** `snake_case` modules/functions, `PascalCase` types
+- **Python:** `snake_case` modules/functions, typed FastAPI models
+- **TypeScript/React:** `PascalCase` components, `camelCase` variables
+
+### Testing Guidelines
+
+Run `just test` before opening a PR. For targeted work:
+
+```bash
+# Single service
+cd microservices/<service>
+cargo test
+
+# All services
+just test  # writes test_results.json and test_logs/
+```
+
+If your change touches service wiring, validate both code and metadata updates.
+
+### Commit & Pull Request Guidelines
+
+Use Conventional Commit style (examples: `feat(productionizer): ...`, `fix: ...`, `chore(deps): ...`).
+
+PRs should include:
+
+1. A focused scope (one topic)
+2. Validation commands executed
+3. Linked issue/context when applicable
+4. Config/docs updates required by the change
+
+**Important:** If adding/renaming/relocating a service, update `services.yaml` and `docs/ARCHITECTURE.md` together in the same PR.
+
+---
+
+## Rust Microservices: Standard Pattern
+
+**For detailed Rust/Axum patterns, auth, database, and CI/CD wiring, see [`microservices/CLAUDE.md`](./microservices/CLAUDE.md).**
+
+All Rust services use Axum 0.8 + sqlx 0.8 + PostgreSQL:
+
+- Path params: `{id}` not `:id`
+- IDs: `TEXT` (UUID v4), never autoincrement
+- SQL placeholders: `$1`, `$2`, … (not `?`)
+- Auth: JWT validated per-handler via `require_auth(&headers)`, not middleware
+- Error envelope: `{ code, message, details? }` (never raw HTTP status codes)
+- Cross-service calls: fail-open if upstream URL env var unset (supports local dev)
+
+---
+
+## Security
+
+This umbrella repository aggregates several independently-versioned services (see `services.yaml`). Services follow SOC 2 controls documented in `microservices/terraform-soc2-baseline/`.
+
+### Supported Versions
+
+Only the latest commit on `main` of each submodule is supported. Older tags receive no security updates.
+
+| Component     | Supported |
+|---------------|-----------|
+| `main` branch | ✅        |
+| Older tags    | ❌        |
+
+### Reporting a Vulnerability
+
+**Do not** open public GitHub issues for security problems.
+
+- Use [GitHub Private Vulnerability Reporting](https://github.com/rodmen07/portfolio/security/advisories/new) on this repository or the affected submodule's repository.
+- Include reproduction steps, affected service(s), commit SHA, and any proof-of-concept payloads.
+
+**Response times:**
+- Acknowledgement: **3 business days**
+- Triage decision: **10 business days**
+- Fix for high/critical: **30 days**
+- Fix for low/medium: **90 days**
+
+Confirmed vulnerabilities are tracked as private security advisories, fixed on a private branch, and disclosed in a coordinated release. Credit is given to the reporter unless they prefer anonymity.
+
+### In Scope
+
+- Source code and CI workflows in this repository and submodules
+- Live deployments listed in `docs/ARCHITECTURE.md` deployment table
+
+### Out of Scope
+
+- Findings requiring physical access, social engineering, or compromised credentials
+- Denial-of-service via volumetric traffic against live demo deployments
+- Issues in third-party services (GCP, Fly.io, GitHub Pages)
+
+### Configuration & Secrets
+
+- Copy `.env.example` to `.env` for local setup; never commit real secrets or API keys
+- Use platform secret managers (GCP/Fly/GitHub Actions) for production credentials
+- Deploy secrets in GCP Secret Manager, Fly.io secrets, or GitHub Actions encrypted secrets
+
+---
+
+## Notable Projects
+
+### Productionizer Agent (Archived)
+
+**Status:** Discontinued as of May 1, 2026.
+
+The Productionizer agent (Gemini 2.5 Flash autonomous coding) was evaluated for daily PR generation. After 8 task executions and 43M tokens consumed ($28.44), the success rate was 0% — all tasks were skipped due to verification failures.
+
+**Key Learning:** Autonomous agents are uneconomical at scale (98.5% of tokens are context resent repeatedly). Interactive AI-assisted development provides better ROI, higher code quality (human validation), and lower cost.
+
+**New Workflow:** Interactive Claude Code with human validation of all code changes.
+
+See `DECISION_LOG.md` for full analysis and `agents/productionizer/ARCHIVED.md` for postmortem.
+
+---
 
 ## Documentation
 
 - [Architecture, services, and deployments](./docs/ARCHITECTURE.md)
 - [Contributing, submodule workflow, local dev](./docs/CONTRIBUTING.md)
 - [Roadmap and release history](./docs/ROADMAP.md)
-- [Security policy](./SECURITY.md)
+- [Microservices patterns (Rust/Axum)](./microservices/CLAUDE.md)
+- [Decision log](./DECISION_LOG.md)
 - [`services.yaml`](./services.yaml) — machine-readable service inventory
 
-## Quick start
-
-```bash
-git clone --recurse-submodules https://github.com/rodmen07/portfolio.git
-cd portfolio
-cp .env.example .env          # then fill in real values
-bash ./run_workspace_tests.sh # cross-repo workspace checks
-```
-
-A [`justfile`](./justfile) wraps the most common workflows; run `just` with no
-arguments to list them. Toolchain versions are pinned in
-[`.devcontainer/`](./.devcontainer/) for VS Code / Codespaces.
+---
 
 ## License
 

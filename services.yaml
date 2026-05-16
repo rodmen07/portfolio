@@ -126,6 +126,12 @@ services:
     role: Portfolio site, admin dashboard, client portal
     submodule: infraportal
 
+  - name: spend-service
+    language: Rust / Axum
+    platform: GCP Cloud Run
+    role: Infrastructure spend tracking — GCP, Fly.io, and GitHub cost aggregation
+    submodule: microservices
+
   # ---- Standalone projects ----
   - name: observaboard
     language: Django 5 / DRF
