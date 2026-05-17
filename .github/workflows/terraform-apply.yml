@@ -102,6 +102,54 @@ jobs:
               body: `## Terraform Plan — \`envs/prod\`\n\`\`\`\n${truncated}\n\`\`\``,
             });
 
+      # ---------------------------------------------------------------------------
+      # Infracost cost estimate (v1.14.5).
+      # Only runs on pull requests when INFRACOST_API_KEY is configured.
+      # Posts a cost diff comment alongside the plan comment above.
+      # ---------------------------------------------------------------------------
+      - name: Setup Infracost
+        if: >-
+          steps.config.outputs.enabled == 'true' &&
+          github.event_name == 'pull_request' &&
+          secrets.INFRACOST_API_KEY != ''
+        uses: infracost/actions/setup@v3
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      - name: Generate Infracost cost estimate
+        if: >-
+          steps.config.outputs.enabled == 'true' &&
+          github.event_name == 'pull_request' &&
+          secrets.INFRACOST_API_KEY != ''
+        run: |
+          cd "${{ env.TF_DIR }}"
+          infracost breakdown \
+            --path . \
+            --var "project_id=${{ vars.GCP_PROJECT_ID }}" \
+            --format json \
+            --out-file "${{ github.workspace }}/infracost.json"
+          infracost output \
+            --path "${{ github.workspace }}/infracost.json" \
+            --format github-comment \
+            --out-file "${{ github.workspace }}/infracost-comment.md"
+
+      - name: Post cost estimate to PR
+        if: >-
+          steps.config.outputs.enabled == 'true' &&
+          github.event_name == 'pull_request' &&
+          secrets.INFRACOST_API_KEY != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const comment = fs.readFileSync('${{ github.workspace }}/infracost-comment.md', 'utf8');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment,
+            });
+
       - name: Terraform apply
         if: >-
           steps.config.outputs.enabled == 'true' &&

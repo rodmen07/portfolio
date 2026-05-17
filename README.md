@@ -465,6 +465,23 @@ cargo test
 |-------------|---------|--------|
 | v1.10.0 | go-gateway: per-client-IP token-bucket rate limiting with route-tier overrides (auth=5, write=30, read=60 rps); X-RateLimit-Limit/Remaining/Reset headers on every response; Retry-After on 429; X-Forwarded-For support; background entry eviction; 9 unit tests (first in repo) | ✅ Published |
 
+### v1.14 - Security Depth, Cost Efficiency & E2E Quality ✅ Complete
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.14.1 | go-gateway security response headers middleware - HSTS 2yr, nosniff, X-Frame-Options DENY, strict-origin Referrer-Policy, CSP default-src 'self', Permissions-Policy (geo/mic/camera/payment disabled); outermost middleware so all responses carry headers | ✅ Published |
+| v1.14.2 | auth-service refresh token rotation - /auth/refresh revokes consumed token immediately, issues new refresh token and sets HttpOnly cookie; replayed tokens rejected via revoked_at column | ✅ Published |
+| v1.14.3 | go-gateway scanner path blocking - BlockScannerPaths middleware drops 404 for 20 well-known probe paths (/.env, /.git, /wp-admin, /phpmyadmin, /actuator, etc.) before JWT auth or rate-limiting runs | ✅ Published |
+| v1.14.4 | Cloud Armor WAF Terraform - go-gateway-ha module gains optional google_compute_security_policy with 5 OWASP CRS deny rules (XSS, SQLi, LFI, RFI, RCE) at priorities 1000-1004; controlled by enable_cloud_armor variable | ✅ Published |
+| v1.14.5 | Infracost cost estimate in Terraform CI - terraform-apply.yml posts Infracost breakdown as PR comment after plan; guarded by INFRACOST_API_KEY secret | ✅ Published |
+| v1.14.6 | BigQuery daily CRM aggregates - pubsub-ingest module gains optional google_bigquery_data_transfer_config scheduled query (every 24h) that aggregates crm_mutations into daily_crm_summary with WRITE_TRUNCATE | ✅ Published |
+| v1.14.7 | go-gateway /health/upstreams - concurrent fan-out to all 12 upstream /health endpoints with 3 s timeout; returns aggregated JSON with overall status ok/degraded; HTTP 502 if any upstream unavailable | ✅ Published |
+| v1.14.8 | Cloud Run gen2 + concurrency - deploy-cloud-run.yml adds --concurrency 80 and --execution-environment gen2 for faster cold starts and predictable memory usage | ✅ Published |
+| v1.14.9 | Circuit breaker + retry transport - per-route CircuitBreaker (5 failures, 30 s open timeout, CLOSED/OPEN/HALF_OPEN states); RetryTransport for GET/HEAD with 50ms*2^n backoff (max 2 retries); 503 + Retry-After when circuit open | ✅ Published |
+| v1.14.10 | auth-service integration test suite - tests/test_integration_flow.py: 5 test classes covering register/login, refresh token rotation + replay detection, revocation, logout, JWKS endpoint; isolated per-test SQLite DB | ✅ Published |
+| v1.14.11 | go-gateway integration test suite - cmd/gateway/gateway_test.go: 6 tests covering health, security headers, scanner block, JWT 401, proxy forwarding, circuit breaker open after 3 x 502; runs in existing CI via go test -race ./... | ✅ Published |
+| v1.14.12 | Patch notes, README & final commit - InfraPortal PatchNotesPage.tsx v1.14 GROUP_META + 12 VERSIONS entries; Portfolio README.md v1.14 section; commit and push all changed repos | ✅ Published |
+
 ### v1.13 - Production Hardening, IaC Completeness & Observaboard Depth ✅ Complete
 
 | Sub-version | Feature | Status |

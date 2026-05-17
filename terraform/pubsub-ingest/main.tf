@@ -265,3 +265,39 @@ resource "google_monitoring_alert_policy" "ingest_spike" {
     EOT
   }
 }
+
+# ---------------------------------------------------------------------------
+# BigQuery scheduled query — daily CRM mutation aggregates (v1.14.6)
+# Enabled when bq_enable_daily_aggregates = true AND bigquery_dataset_id != "".
+# Runs every 24 hours and writes a daily_crm_summary table with per-day,
+# per-resource-type, per-method event counts derived from the raw crm_mutations
+# table. Requires the BigQuery Data Transfer API to be enabled in the project.
+# ---------------------------------------------------------------------------
+resource "google_bigquery_data_transfer_config" "daily_crm_agg" {
+  count = (var.bq_enable_daily_aggregates && var.bigquery_dataset_id != "") ? 1 : 0
+
+  display_name           = "${var.topic_name}-daily-crm-summary"
+  location               = var.region
+  data_source_id         = "scheduled_query"
+  schedule               = "every 24 hours"
+  destination_dataset_id = google_bigquery_dataset.ingest_sink[0].dataset_id
+
+  params = {
+    query = <<-SQL
+      SELECT
+        TIMESTAMP_TRUNC(publish_time, DAY)                                      AS day,
+        IFNULL(JSON_EXTRACT_SCALAR(attributes, '$.resource_type'), 'unknown')   AS resource_type,
+        IFNULL(JSON_EXTRACT_SCALAR(attributes, '$.method'), 'unknown')          AS method,
+        COUNT(*)                                                                 AS event_count
+      FROM `${var.project_id}.${var.bigquery_dataset_id}.${var.bigquery_table_id}`
+      WHERE publish_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 25 HOUR)
+      GROUP BY 1, 2, 3
+      ORDER BY 1 DESC, 4 DESC
+    SQL
+
+    destination_table_name_template = "daily_crm_summary"
+    write_disposition                = "WRITE_TRUNCATE"
+  }
+
+  depends_on = [google_bigquery_table.crm_mutations]
+}

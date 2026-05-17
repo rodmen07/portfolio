@@ -80,3 +80,13 @@ variable "spike_threshold_per_min" {
   type        = number
   default     = 1000
 }
+
+# ---------------------------------------------------------------------------
+# BigQuery scheduled query / daily aggregates (v1.14.6)
+# ---------------------------------------------------------------------------
+
+variable "bq_enable_daily_aggregates" {
+  description = "Create a BigQuery Data Transfer scheduled query that produces a daily_crm_summary table from crm_mutations. Requires bigquery_dataset_id and the BigQuery Data Transfer API to be enabled in the project."
+  type        = bool
+  default     = false
+}

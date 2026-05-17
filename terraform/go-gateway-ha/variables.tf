@@ -32,3 +32,9 @@ variable "domain" {
   type        = string
   default     = ""
 }
+
+variable "enable_cloud_armor" {
+  description = "Attach a Cloud Armor WAF security policy to the backend service. Applies OWASP CRS rules for XSS, SQLi, LFI, RFI, and RCE."
+  type        = bool
+  default     = false
+}
