@@ -1,0 +1,33 @@
+name: Release Consistency
+
+on:
+  pull_request:
+    paths:
+      - "README.md"
+      - "docs/ROADMAP.md"
+      - "infraportal/src/pages/PatchNotesPage.tsx"
+      - "scripts/check_release_consistency.py"
+      - ".github/workflows/release-consistency.yml"
+  push:
+    branches: [main]
+    paths:
+      - "README.md"
+      - "docs/ROADMAP.md"
+      - "scripts/check_release_consistency.py"
+  workflow_dispatch:
+
+jobs:
+  release-consistency:
+    name: README vs ROADMAP version parity
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check release consistency
+        run: python scripts/check_release_consistency.py
