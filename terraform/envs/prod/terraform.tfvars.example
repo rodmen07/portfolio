@@ -27,6 +27,9 @@ vendor_bucket_name = "your-vendor-evidence-bucket"
 # Leave empty to use the raw anycast IP over HTTP (dev/staging).
 # gateway_domain = ""
 
+# Enable Cloud Armor WAF on go-gateway backend service.
+# enable_cloud_armor = true
+
 # Service account for go-gateway Cloud Run; grants Pub/Sub publisher role.
 # gateway_sa_email = "go-gateway@your-gcp-project-id.iam.gserviceaccount.com"
 
@@ -37,5 +40,37 @@ vendor_bucket_name = "your-vendor-evidence-bucket"
 # Email for dead-letter topic Cloud Monitoring alerts.
 # pubsub_alert_email = "alerts@example.com"
 
+# BigQuery sink for CRM ingest pipeline + daily aggregate query.
+# pubsub_bigquery_dataset_id = "crm_analytics"
+# bq_enable_daily_aggregates = true
+
 # IAM reviewers for vendor evidence bucket + BigQuery registry.
 # security_reviewer_emails = ["security@example.com"]
+
+# SLO burn-rate and uptime alert notifications.
+# slo_alert_email = "sre-alerts@example.com"
+
+# Uptime checks (60s interval) for key services.
+# uptime_checks = {
+#   go_gateway = {
+#     display_name = "go-gateway"
+#     host         = "go-gateway-xxxxxxxxxx-uc.a.run.app"
+#     path         = "/health"
+#     use_ssl      = true
+#     port         = 443
+#   }
+#   auth_service = {
+#     display_name = "auth-service"
+#     host         = "auth-service-xxxxxxxxxx-uc.a.run.app"
+#     path         = "/health"
+#     use_ssl      = true
+#     port         = 443
+#   }
+# }
+
+# Redis backing store for distributed rate limits in go-gateway.
+# enable_gateway_redis        = true
+# gateway_redis_name          = "go-gateway-redis"
+# gateway_redis_tier          = "STANDARD_HA"
+# gateway_redis_memory_size_gb = 1
+# gateway_redis_secret_id     = "GO_GATEWAY_REDIS_URL"

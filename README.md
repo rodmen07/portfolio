@@ -465,6 +465,21 @@ cargo test
 |-------------|---------|--------|
 | v1.10.0 | go-gateway: per-client-IP token-bucket rate limiting with route-tier overrides (auth=5, write=30, read=60 rps); X-RateLimit-Limit/Remaining/Reset headers on every response; Retry-After on 429; X-Forwarded-For support; background entry eviction; 9 unit tests (first in repo) | ✅ Published |
 
+### v1.15 - Deployment Safety, SLO Monitoring & Distributed State ✅ Complete
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.15.1 | go-gateway Cloud Run canary rollout workflow - deploys new revision with no traffic, runs smoke gate, shifts to 10/90 split, then promotes to 100% on success | ✅ Published |
+| v1.15.2 | smoke-test.sh deployment gate - validates /health body contract, /health/upstreams reachability, retries with bounded intervals, and exits non-zero on failure | ✅ Published |
+| v1.15.3 | reusable rollback composite action - restores 100% traffic to stable revision on canary smoke failure and posts rollback summary in workflow output | ✅ Published |
+| v1.15.4 | terraform/slos module - custom monitoring service with availability and latency SLO resources for go-gateway (default 99.9% availability and latency threshold under 2s) | ✅ Published |
+| v1.15.5 | SLO burn-rate alert policies - fast and slow burn alerts with configurable email channel via slo_alert_email | ✅ Published |
+| v1.15.6 | configurable uptime checks - per-service uptime_check resources and 3-minute sustained failure alert policies | ✅ Published |
+| v1.15.7 | terraform/memorystore module - provisions Redis and exports REDIS_URL, with optional Secret Manager write path for gateway consumption | ✅ Published |
+| v1.15.8 | distributed Redis-backed rate limiter - gateway uses INCR+EXPIRE fixed windows across instances when REDIS_URL is configured (fail-open on Redis errors) | ✅ Published |
+| v1.15.9 | gateway response cache - in-process LRU cache for read endpoints (reporting/search/events/projects) with per-subject cache keys and X-Cache MISS/HIT headers | ✅ Published |
+| v1.15.10 | patch notes and release wrap-up - InfraPortal patch notes, README roadmap update, and validation of Go + Terraform changes | ✅ Published |
+
 ### v1.14 - Security Depth, Cost Efficiency & E2E Quality ✅ Complete
 
 | Sub-version | Feature | Status |
