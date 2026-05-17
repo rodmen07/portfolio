@@ -465,6 +465,15 @@ cargo test
 |-------------|---------|--------|
 | v1.10.0 | go-gateway: per-client-IP token-bucket rate limiting with route-tier overrides (auth=5, write=30, read=60 rps); X-RateLimit-Limit/Remaining/Reset headers on every response; Retry-After on 429; X-Forwarded-For support; background entry eviction; 9 unit tests (first in repo) | ✅ Published |
 
+### v1.12 - IaC Root Module, JWT Auth at Gateway & CI/CD
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.12.1 | `terraform/envs/prod` root module wiring all four Portfolio Terraform modules with a GCS backend, aggregated outputs, and a `terraform.tfvars.example` | ✅ Published |
+| v1.12.2 | go-gateway JWT auth middleware (HS256, stdlib only) - validates Bearer tokens on all routes except `/api/auth` and `/health`, injects `X-Auth-Subject`/`X-Auth-Roles` for upstream services | ✅ Published |
+| v1.12.3 | CI GitHub Actions for go-gateway (`go vet`, `go test -race`) and Terraform lint workflow (`fmt -check`, `validate`) for all modules and envs/prod | ✅ Published |
+| v1.12.4 | Cloud Monitoring dead-letter alert - `alert_email` variable added to `pubsub-ingest` module, provisions email notification channel + alert policy on dead-letter drain subscription | ✅ Published |
+
 ### v1.11 - Multi-Region HA, Cloud SQL Read Replica & Pub/Sub Ingest
 
 | Sub-version | Feature | Status |

@@ -1,0 +1,46 @@
+name: Terraform Lint
+
+on:
+  push:
+    branches-ignore: [main]
+    paths:
+      - "terraform/**"
+      - ".github/workflows/terraform-lint.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "terraform/**"
+      - ".github/workflows/terraform-lint.yml"
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: fmt-check and validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: terraform fmt check
+        run: terraform fmt -check -recursive terraform/
+
+      - name: Validate reusable modules
+        run: |
+          for dir in terraform/*/; do
+            if [ -f "${dir}versions.tf" ]; then
+              echo "--- validating ${dir} ---"
+              terraform -chdir="${dir}" init -backend=false -input=false -no-color
+              terraform -chdir="${dir}" validate -no-color
+            fi
+          done
+
+      - name: Validate envs/prod
+        run: |
+          echo "--- validating terraform/envs/prod ---"
+          terraform -chdir=terraform/envs/prod init -backend=false -input=false -no-color
+          terraform -chdir=terraform/envs/prod validate -no-color

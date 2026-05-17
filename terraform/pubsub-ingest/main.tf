@@ -90,3 +90,65 @@ resource "google_pubsub_topic_iam_member" "gateway_publish" {
   role   = "roles/pubsub.publisher"
   member = "serviceAccount:${var.gateway_sa_email}"
 }
+
+# ---------------------------------------------------------------------------
+# Cloud Monitoring — alert when messages accumulate in the dead-letter topic
+# (v1.12.4)
+# ---------------------------------------------------------------------------
+
+resource "google_monitoring_notification_channel" "dead_letter_email" {
+  count        = var.alert_email != "" ? 1 : 0
+  display_name = "Dead-letter alert: ${var.dead_letter_topic_name}"
+  type         = "email"
+
+  labels = {
+    email_address = var.alert_email
+  }
+}
+
+resource "google_monitoring_alert_policy" "dead_letter" {
+  count        = var.alert_email != "" ? 1 : 0
+  display_name = "Pub/Sub dead-letter backlog: ${var.dead_letter_topic_name}"
+  combiner     = "OR"
+
+  conditions {
+    display_name = "Undelivered messages in dead-letter drain subscription"
+
+    condition_threshold {
+      filter = join(" AND ", [
+        "resource.type = \"pubsub_subscription\"",
+        "resource.labels.subscription_id = \"${google_pubsub_subscription.dead_letter_drain.name}\"",
+        "metric.type = \"pubsub.googleapis.com/subscription/num_undelivered_messages\"",
+      ])
+
+      # Alert when at least 1 message has been undelivered for 5 minutes.
+      comparison      = "COMPARISON_GT"
+      threshold_value = 0
+      duration        = "300s"
+
+      aggregations {
+        alignment_period   = "60s"
+        per_series_aligner = "ALIGN_MAX"
+      }
+    }
+  }
+
+  notification_channels = [google_monitoring_notification_channel.dead_letter_email[0].name]
+
+  severity = "WARNING"
+
+  documentation {
+    content = <<-EOT
+      Messages have accumulated in the Pub/Sub dead-letter topic '${var.dead_letter_topic_name}'.
+
+      This means go-gateway observer events failed to be delivered to the observaboard
+      ingest endpoint (${var.observaboard_ingest_url}) after ${var.max_delivery_attempts} attempts.
+
+      Remediation steps:
+      1. Check Cloud Run logs for the observaboard service — look for 4xx/5xx on /api/ingest/.
+      2. Inspect messages in the dead-letter drain subscription using the Cloud Console
+         or: gcloud pubsub subscriptions pull ${var.dead_letter_topic_name}-drain --limit=10
+      3. Replay valid messages by republishing them to ${var.topic_name} once the issue is resolved.
+    EOT
+  }
+}

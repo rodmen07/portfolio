@@ -42,3 +42,9 @@ variable "max_delivery_attempts" {
   type        = number
   default     = 5
 }
+
+variable "alert_email" {
+  description = "Email address for Cloud Monitoring alerts when messages accumulate in the dead-letter topic. Leave empty to skip alert creation."
+  type        = string
+  default     = ""
+}
