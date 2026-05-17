@@ -48,3 +48,35 @@ variable "alert_email" {
   type        = string
   default     = ""
 }
+
+# ---------------------------------------------------------------------------
+# BigQuery sink (v1.13)
+# ---------------------------------------------------------------------------
+
+variable "bigquery_dataset_id" {
+  description = "BigQuery dataset ID for the CRM mutation analytics sink. Leave empty to skip BigQuery subscription creation."
+  type        = string
+  default     = ""
+}
+
+variable "bigquery_table_id" {
+  description = "BigQuery table name for the CRM mutation analytics sink (created inside bigquery_dataset_id)."
+  type        = string
+  default     = "crm_mutations"
+}
+
+# ---------------------------------------------------------------------------
+# Ingest spike alert (v1.13)
+# ---------------------------------------------------------------------------
+
+variable "spike_alert_email" {
+  description = "Email for Cloud Monitoring alerts when the ingest topic publish rate exceeds the spike threshold. Leave empty to skip spike alert creation."
+  type        = string
+  default     = ""
+}
+
+variable "spike_threshold_per_min" {
+  description = "Message publish rate (messages/minute) above which the ingest spike alert fires."
+  type        = number
+  default     = 1000
+}

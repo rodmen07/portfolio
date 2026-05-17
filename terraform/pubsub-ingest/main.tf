@@ -149,6 +149,119 @@ resource "google_monitoring_alert_policy" "dead_letter" {
       2. Inspect messages in the dead-letter drain subscription using the Cloud Console
          or: gcloud pubsub subscriptions pull ${var.dead_letter_topic_name}-drain --limit=10
       3. Replay valid messages by republishing them to ${var.topic_name} once the issue is resolved.
+         See go-gateway/scripts/replay-deadletter.sh for an automated replay helper.
+    EOT
+  }
+}
+
+# ---------------------------------------------------------------------------
+# BigQuery sink — forward all ingest messages to BQ for analytics
+# (v1.13 — enabled when bigquery_dataset_id is set)
+# ---------------------------------------------------------------------------
+
+resource "google_bigquery_dataset" "ingest_sink" {
+  count       = var.bigquery_dataset_id != "" ? 1 : 0
+  dataset_id  = var.bigquery_dataset_id
+  location    = var.region
+  description = "CRM mutation ingest events streamed from the Pub/Sub ingest pipeline."
+}
+
+resource "google_bigquery_table" "crm_mutations" {
+  count               = var.bigquery_dataset_id != "" ? 1 : 0
+  dataset_id          = google_bigquery_dataset.ingest_sink[0].dataset_id
+  table_id            = var.bigquery_table_id
+  deletion_protection = false
+
+  schema = jsonencode([
+    { name = "subscription_name", type = "STRING",    mode = "NULLABLE", description = "Pub/Sub subscription name." },
+    { name = "message_id",        type = "STRING",    mode = "NULLABLE", description = "Pub/Sub message ID." },
+    { name = "publish_time",      type = "TIMESTAMP", mode = "NULLABLE", description = "Message publish timestamp." },
+    { name = "data",              type = "STRING",    mode = "NULLABLE", description = "Base64-encoded message payload." },
+    { name = "attributes",        type = "STRING",    mode = "NULLABLE", description = "Message attributes serialised as JSON." },
+  ])
+}
+
+# Pub/Sub service account needs BigQuery Data Editor on the sink dataset.
+resource "google_bigquery_dataset_iam_member" "pubsub_bq_editor" {
+  count      = var.bigquery_dataset_id != "" ? 1 : 0
+  dataset_id = google_bigquery_dataset.ingest_sink[0].dataset_id
+  role       = "roles/bigquery.dataEditor"
+  member     = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
+}
+
+resource "google_pubsub_subscription" "bigquery_sink" {
+  count = var.bigquery_dataset_id != "" ? 1 : 0
+  name  = "${var.topic_name}-bq-sink"
+  topic = google_pubsub_topic.ingest.id
+
+  bigquery_config {
+    table          = "${var.project_id}.${google_bigquery_dataset.ingest_sink[0].dataset_id}.${google_bigquery_table.crm_mutations[0].table_id}"
+    write_metadata = true
+  }
+
+  depends_on = [google_bigquery_dataset_iam_member.pubsub_bq_editor]
+}
+
+# ---------------------------------------------------------------------------
+# Cloud Monitoring — alert on ingest topic publish spike
+# (v1.13 — enabled when spike_alert_email is set)
+# ---------------------------------------------------------------------------
+
+resource "google_monitoring_notification_channel" "spike_email" {
+  count        = var.spike_alert_email != "" ? 1 : 0
+  display_name = "Ingest spike alert: ${var.topic_name}"
+  type         = "email"
+
+  labels = {
+    email_address = var.spike_alert_email
+  }
+}
+
+resource "google_monitoring_alert_policy" "ingest_spike" {
+  count        = var.spike_alert_email != "" ? 1 : 0
+  display_name = "Pub/Sub ingest spike: ${var.topic_name}"
+  combiner     = "OR"
+
+  conditions {
+    display_name = "High publish rate on ${var.topic_name}"
+
+    condition_threshold {
+      filter = join(" AND ", [
+        "resource.type = \"pubsub_topic\"",
+        "resource.labels.topic_id = \"${google_pubsub_topic.ingest.name}\"",
+        "metric.type = \"pubsub.googleapis.com/topic/send_message_operation_count\"",
+      ])
+
+      # ALIGN_DELTA over 60 s gives the count of messages published in that window.
+      comparison      = "COMPARISON_GT"
+      threshold_value = var.spike_threshold_per_min
+      duration        = "60s"
+
+      aggregations {
+        alignment_period     = "60s"
+        per_series_aligner   = "ALIGN_DELTA"
+        cross_series_reducer = "REDUCE_SUM"
+        group_by_fields      = ["resource.labels.topic_id"]
+      }
+    }
+  }
+
+  notification_channels = [google_monitoring_notification_channel.spike_email[0].name]
+
+  severity = "WARNING"
+
+  documentation {
+    content = <<-EOT
+      The ingest topic '${var.topic_name}' is receiving more than ${var.spike_threshold_per_min}
+      messages per minute — this may indicate an unexpected traffic surge or a publishing loop.
+
+      Remediation steps:
+      1. Review go-gateway Cloud Run logs for unusual request patterns.
+      2. Check the Pub/Sub topic metrics dashboard for the source of the spike.
+      3. If the spike is legitimate (e.g. a bulk import), increase spike_threshold_per_min
+         in Terraform variables and re-apply.
+      4. If the spike is unintended, trace back to the publishing service and apply
+         rate limits or circuit breakers as appropriate.
     EOT
   }
 }

@@ -465,6 +465,20 @@ cargo test
 |-------------|---------|--------|
 | v1.10.0 | go-gateway: per-client-IP token-bucket rate limiting with route-tier overrides (auth=5, write=30, read=60 rps); X-RateLimit-Limit/Remaining/Reset headers on every response; Retry-After on 429; X-Forwarded-For support; background entry eviction; 9 unit tests (first in repo) | ✅ Published |
 
+### v1.13 - Production Hardening, IaC Completeness & Observaboard Depth ✅ Complete
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.13.1 | JWT middleware unit tests - auth_test.go covers HS256 + RS256 paths, expiry, wrong signature, wrong issuer, skip-prefix, no-op mode; RSA test key generated in-process | ✅ Published |
+| v1.13.2 | RS256 JWT support in go-gateway + JWKS endpoint in auth-service - algorithm dispatch from JWT header, rsa.VerifyPKCS1v15, AUTH_JWT_PUBLIC_KEY PEM config, /.well-known/jwks.json returns RSA public key in JWK format | ✅ Published |
+| v1.13.3 | slog structured logging in go-gateway - JSON handler set at startup; slog.Info/slog.Error replace fmt.Printf/log.Printf in main.go and middleware/logger.go for Cloud Logging key/value parsing | ✅ Published |
+| v1.13.4 | Terraform apply workflow - plan on PRs with output posted as comment, workflow_dispatch with apply=true runs apply; WIF auth, GCS backend-config, envs/prod | ✅ Published |
+| v1.13.5 | Terraform drift detection - weekday scheduled plan with -detailed-exitcode; opens a GitHub issue with plan output on exit code 2 (drift), links to apply workflow for one-click remediation | ✅ Published |
+| v1.13.6 | Deploy workflow JWT secret wiring - AUTH_JWT_SECRET added to --set-secrets in Cloud Run deploy, sourced from GCP Secret Manager | ✅ Published |
+| v1.13.7 | Dead-letter replay script - scripts/replay-deadletter.sh drains dead-letter subscription and republishes to ingest topic; DRY_RUN mode, jq+gcloud dependencies, set -euo pipefail | ✅ Published |
+| v1.13.8 | BigQuery analytics sink for pubsub-ingest - conditional google_pubsub_subscription.bigquery_sink with dataset, table (5-column schema), and BigQuery Data Editor IAM binding; enabled by bigquery_dataset_id variable | ✅ Published |
+| v1.13.9 | Ingest spike alert - Cloud Monitoring alert on send_message_operation_count > spike_threshold_per_min over 60s ALIGN_DELTA window; conditional on spike_alert_email variable | ✅ Published |
+
 ### v1.12 - IaC Root Module, JWT Auth at Gateway & CI/CD
 
 | Sub-version | Feature | Status |

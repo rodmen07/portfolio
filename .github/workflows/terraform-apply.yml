@@ -1,0 +1,115 @@
+name: Terraform — Plan & Apply (envs/prod)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "terraform/**"
+  pull_request:
+    paths:
+      - "terraform/**"
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Run terraform apply after a successful plan?"
+        required: true
+        default: "false"
+        type: choice
+        options: ["false", "true"]
+
+env:
+  TF_DIR: terraform/envs/prod
+  GCP_REGION: us-central1
+
+jobs:
+  terraform:
+    name: >-
+      Terraform
+      ${{ github.event_name == 'workflow_dispatch' && inputs.apply == 'true' && 'Plan & Apply' || 'Plan' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write    # required for OIDC token exchange with GCP WIF
+      pull-requests: write  # for posting plan output as a PR comment
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate configuration
+        id: config
+        run: |
+          if [ -z "${{ vars.GCP_PROJECT_ID }}" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping: GCP_PROJECT_ID variable is not set."
+            exit 0
+          fi
+          if [ -z "${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping: GCP_WORKLOAD_IDENTITY_PROVIDER secret is not set."
+            exit 0
+          fi
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+      - name: Authenticate to Google Cloud
+        if: steps.config.outputs.enabled == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Setup Terraform
+        if: steps.config.outputs.enabled == 'true'
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.6"
+
+      - name: Terraform init
+        if: steps.config.outputs.enabled == 'true'
+        run: |
+          cd "${{ env.TF_DIR }}"
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="prefix=envs/prod"
+
+      - name: Terraform validate
+        if: steps.config.outputs.enabled == 'true'
+        run: |
+          cd "${{ env.TF_DIR }}"
+          terraform validate
+
+      - name: Terraform plan
+        if: steps.config.outputs.enabled == 'true'
+        id: plan
+        run: |
+          cd "${{ env.TF_DIR }}"
+          terraform plan \
+            -var="project_id=${{ vars.GCP_PROJECT_ID }}" \
+            -var="region=${{ env.GCP_REGION }}" \
+            -no-color 2>&1 | tee "${{ github.workspace }}/plan_output.txt"
+
+      - name: Post plan output to PR
+        if: steps.config.outputs.enabled == 'true' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const raw = fs.readFileSync('${{ github.workspace }}/plan_output.txt', 'utf8');
+            const truncated = raw.length > 60000 ? raw.slice(0, 60000) + '\n...(truncated)' : raw;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## Terraform Plan — \`envs/prod\`\n\`\`\`\n${truncated}\n\`\`\``,
+            });
+
+      - name: Terraform apply
+        if: >-
+          steps.config.outputs.enabled == 'true' &&
+          github.event_name == 'workflow_dispatch' &&
+          inputs.apply == 'true'
+        run: |
+          cd "${{ env.TF_DIR }}"
+          terraform apply \
+            -var="project_id=${{ vars.GCP_PROJECT_ID }}" \
+            -var="region=${{ env.GCP_REGION }}" \
+            -auto-approve

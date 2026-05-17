@@ -1,0 +1,108 @@
+name: Terraform — Drift Detection
+
+on:
+  schedule:
+    - cron: "0 6 * * 1-5"  # weekdays at 06:00 UTC
+  workflow_dispatch:
+
+env:
+  TF_DIR: terraform/envs/prod
+  GCP_REGION: us-central1
+
+jobs:
+  drift:
+    name: Detect infrastructure drift
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # required for OIDC token exchange with GCP WIF
+      issues: write     # for opening a drift-alert issue
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate configuration
+        id: config
+        run: |
+          if [ -z "${{ vars.GCP_PROJECT_ID }}" ] || [ -z "${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping drift check: required GCP credentials are not configured."
+            exit 0
+          fi
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+      - name: Authenticate to Google Cloud
+        if: steps.config.outputs.enabled == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Setup Terraform
+        if: steps.config.outputs.enabled == 'true'
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.6"
+
+      - name: Terraform init
+        if: steps.config.outputs.enabled == 'true'
+        run: |
+          cd "${{ env.TF_DIR }}"
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="prefix=envs/prod"
+
+      - name: Detect drift
+        if: steps.config.outputs.enabled == 'true'
+        id: drift
+        run: |
+          cd "${{ env.TF_DIR }}"
+          set +e
+          terraform plan \
+            -var="project_id=${{ vars.GCP_PROJECT_ID }}" \
+            -var="region=${{ env.GCP_REGION }}" \
+            -detailed-exitcode \
+            -no-color 2>&1 | tee "${{ github.workspace }}/drift_output.txt"
+          PLAN_EXIT=${PIPESTATUS[0]}
+          echo "exit_code=${PLAN_EXIT}" >> "$GITHUB_OUTPUT"
+          set -e
+          if [ "${PLAN_EXIT}" -eq 1 ]; then
+            echo "::error::Terraform plan failed — check credentials and provider configuration."
+            exit 1
+          elif [ "${PLAN_EXIT}" -eq 2 ]; then
+            echo "::warning::Infrastructure drift detected! Live state differs from Terraform state."
+          else
+            echo "No drift detected — live infrastructure matches the Terraform state."
+          fi
+
+      - name: Open drift alert issue
+        if: steps.config.outputs.enabled == 'true' && steps.drift.outputs.exit_code == '2'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const raw = fs.readFileSync('${{ github.workspace }}/drift_output.txt', 'utf8');
+            const truncated = raw.length > 60000 ? raw.slice(0, 60000) + '\n...(truncated)' : raw;
+            const today = new Date().toISOString().split('T')[0];
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[Drift] Infrastructure drift detected — ${today}`,
+              body: [
+                '## Infrastructure Drift Detected',
+                '',
+                'Terraform plan found differences between the `.tfstate` and live GCP resources.',
+                'This may indicate out-of-band changes or a failed apply.',
+                '',
+                '<details>',
+                '<summary>Full plan output</summary>',
+                '',
+                '```',
+                truncated,
+                '```',
+                '</details>',
+                '',
+                `**Reconcile:** run the [Terraform apply workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/terraform-apply.yml) with \`apply=true\`.`,
+              ].join('\n'),
+              labels: ['infrastructure', 'drift'],
+            });
