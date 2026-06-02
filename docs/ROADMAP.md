@@ -116,6 +116,7 @@ Last synchronized: 2026-05-17
 | Sub-version | Feature | Status |
 |-------------|---------|--------|
 | v1.3.1 | Productionizer autonomous improvement cycle | ✅ Published |
+| v1.3.2 | client portal dashboard expansion - deliverable effort tracking, curated project links, progress updates, and Gmail sync support | ✅ Published |
 | v1.3.2 | client portal dashboard expansion: deliverable effort tracking, curated project links, progress updates, and Gmail sync support | ✅ Published |
 
 ## v1.2 - Operational Maturity ✅ Complete
