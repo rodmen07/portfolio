@@ -1,0 +1,31 @@
+name: Generate API Documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'go-gateway/internal/openapi/spec.json'
+  workflow_dispatch:
+
+jobs:
+  generate-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate Redoc static HTML
+        run: |
+          npx --yes @redocly/cli@latest build-docs \
+            go-gateway/internal/openapi/spec.json \
+            --output infraportal/public/api-reference/index.html
+
+      - name: Copy spec to infraportal/public
+        run: cp go-gateway/internal/openapi/spec.json infraportal/public/openapi.json
+
+      - name: Commit generated files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add infraportal/public/api-reference/ infraportal/public/openapi.json
+          git diff --staged --quiet || git commit -m "chore: regenerate API docs from spec.json [skip ci]"
+          git push
