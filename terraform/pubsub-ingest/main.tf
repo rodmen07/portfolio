@@ -173,11 +173,11 @@ resource "google_bigquery_table" "crm_mutations" {
   deletion_protection = false
 
   schema = jsonencode([
-    { name = "subscription_name", type = "STRING",    mode = "NULLABLE", description = "Pub/Sub subscription name." },
-    { name = "message_id",        type = "STRING",    mode = "NULLABLE", description = "Pub/Sub message ID." },
-    { name = "publish_time",      type = "TIMESTAMP", mode = "NULLABLE", description = "Message publish timestamp." },
-    { name = "data",              type = "STRING",    mode = "NULLABLE", description = "Base64-encoded message payload." },
-    { name = "attributes",        type = "STRING",    mode = "NULLABLE", description = "Message attributes serialised as JSON." },
+    { name = "subscription_name", type = "STRING", mode = "NULLABLE", description = "Pub/Sub subscription name." },
+    { name = "message_id", type = "STRING", mode = "NULLABLE", description = "Pub/Sub message ID." },
+    { name = "publish_time", type = "TIMESTAMP", mode = "NULLABLE", description = "Message publish timestamp." },
+    { name = "data", type = "STRING", mode = "NULLABLE", description = "Base64-encoded message payload." },
+    { name = "attributes", type = "STRING", mode = "NULLABLE", description = "Message attributes serialised as JSON." },
   ])
 }
 

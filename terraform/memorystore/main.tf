@@ -1,13 +1,13 @@
 resource "google_redis_instance" "gateway" {
-  name               = var.name
-  project            = var.project_id
-  region             = var.region
-  tier               = var.tier
-  memory_size_gb     = var.memory_size_gb
-  redis_version      = var.redis_version
-  connect_mode       = var.connect_mode
-  display_name       = "go-gateway redis"
-  auth_enabled       = false
+  name                    = var.name
+  project                 = var.project_id
+  region                  = var.region
+  tier                    = var.tier
+  memory_size_gb          = var.memory_size_gb
+  redis_version           = var.redis_version
+  connect_mode            = var.connect_mode
+  display_name            = "go-gateway redis"
+  auth_enabled            = false
   transit_encryption_mode = "DISABLED"
 }
 
