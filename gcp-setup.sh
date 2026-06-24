@@ -110,6 +110,7 @@ for ROLE in \
   roles/run.developer \
   roles/artifactregistry.writer \
   roles/secretmanager.secretAccessor \
+  roles/monitoring.viewer \
   roles/iam.serviceAccountUser; do
   gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
     --member="serviceAccount:${SA_EMAIL}" \

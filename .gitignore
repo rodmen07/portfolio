@@ -26,6 +26,10 @@ Thumbs.db
 .claude/settings.local.json
 .claude/worktrees/
 *.tmp
+# Editor crash-recovery / temp files (e.g. file.ext.tmp.<pid>.<hash>)
+*.tmp.*
+*.bak
+*.orig
 
 # Local environment overrides
 .env
