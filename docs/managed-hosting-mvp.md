@@ -167,4 +167,5 @@ Implement the landing page and consultation flow first, then expand into the cli
 - Done: consultation form with a success state on the landing page.
 - Done: consultation requests persist locally and carry a `new` -> `reviewed` -> `accepted` status.
 - Done: route-addressable consultation review page at `#/admin/consultations` to triage incoming requests through intake to onboarding.
-- Next: connect the consultation flow to a real backend or CRM workflow instead of local persistence.
+- Done: admin-side "Send to CRM" sync that pushes a consultation into the contacts-service as a lead, using the admin token (public form stays local, keeping the trust boundary correct).
+- Next: add a public intake endpoint so landing-page submissions create leads server-side without exposing admin credentials, then expand the client dashboard (Phase 2).
