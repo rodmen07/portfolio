@@ -169,3 +169,10 @@ Implement the landing page and consultation flow first, then expand into the cli
 - Done: route-addressable consultation review page at `#/admin/consultations` to triage incoming requests through intake to onboarding.
 - Done: admin-side "Send to CRM" sync that pushes a consultation into the contacts-service as a lead, using the admin token (public form stays local, keeping the trust boundary correct).
 - Next: add a public intake endpoint so landing-page submissions create leads server-side without exposing admin credentials, then expand the client dashboard (Phase 2).
+
+### Phase 2 - Client portal basics
+
+- Done: client dashboard reuses the existing auth flow and projects-service data.
+- Done: managed service snapshot on the client dashboard.
+- Done: launch onboarding checklist on the client dashboard so clients can see completed and pending steps, with progress saved per project.
+- Next: add a maintenance and support request queue (Phase 3).
