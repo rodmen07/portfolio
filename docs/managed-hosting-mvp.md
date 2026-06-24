@@ -168,7 +168,7 @@ Implement the landing page and consultation flow first, then expand into the cli
 - Done: consultation requests persist locally and carry a `new` -> `reviewed` -> `accepted` status.
 - Done: route-addressable consultation review page at `#/admin/consultations` to triage incoming requests through intake to onboarding.
 - Done: admin-side "Send to CRM" sync that pushes a consultation into the contacts-service as a lead, using the admin token (public form stays local, keeping the trust boundary correct).
-- Next: add a public intake endpoint so landing-page submissions create leads server-side without exposing admin credentials, then expand the client dashboard (Phase 2).
+- Done: env-gated public lead intake on the landing form. When VITE_LEAD_INTAKE_URL is set, submissions are also posted to a public, unauthenticated intake endpoint; otherwise the form stays local. The backend endpoint is deferred until the microservices refactor (PR #80) lands.
 
 ### Phase 2 - Client portal basics
 
@@ -180,4 +180,6 @@ Implement the landing page and consultation flow first, then expand into the cli
 ### Phase 3 - Managed service workflow
 
 - Done: support and maintenance request queue on the client dashboard so clients can log requests, track status, and withdraw open ones without email.
-- Next: surface request status transitions for the team (admin-side queue) and add basic service health indicators.
+- Done: admin support queue at `#/admin/support` that aggregates requests across projects and moves each one open -> in progress -> resolved.
+- Done: service health indicators on the client dashboard, derived from live onboarding progress and open support count plus the always-on hosting baseline.
+- Next: add the public lead-intake backend endpoint once the microservices refactor (PR #80) lands, and wire real per-client monitoring into the health indicators.
