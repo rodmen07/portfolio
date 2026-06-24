@@ -296,7 +296,7 @@ resource "google_bigquery_data_transfer_config" "daily_crm_agg" {
     SQL
 
     destination_table_name_template = "daily_crm_summary"
-    write_disposition                = "WRITE_TRUNCATE"
+    write_disposition               = "WRITE_TRUNCATE"
   }
 
   depends_on = [google_bigquery_table.crm_mutations]
