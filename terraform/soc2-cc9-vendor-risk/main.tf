@@ -64,11 +64,11 @@ resource "google_storage_bucket_iam_binding" "vendor_evidence_writers" {
 # certification status, and review dates. Satisfies CC9.2 inventory control.
 # ---------------------------------------------------------------------------
 resource "google_bigquery_dataset" "vendor_registry" {
-  dataset_id                  = var.vendor_registry_dataset_id
-  project                     = var.project_id
-  location                    = var.region
-  description                 = "SOC 2 CC9.2 vendor risk registry. Tracks third-party vendors, risk tiers, and review cadence."
-  delete_contents_on_destroy  = false
+  dataset_id                 = var.vendor_registry_dataset_id
+  project                    = var.project_id
+  location                   = var.region
+  description                = "SOC 2 CC9.2 vendor risk registry. Tracks third-party vendors, risk tiers, and review cadence."
+  delete_contents_on_destroy = false
 
   dynamic "access" {
     for_each = var.security_reviewer_emails
