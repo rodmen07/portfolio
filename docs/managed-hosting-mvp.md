@@ -176,3 +176,8 @@ Implement the landing page and consultation flow first, then expand into the cli
 - Done: managed service snapshot on the client dashboard.
 - Done: launch onboarding checklist on the client dashboard so clients can see completed and pending steps, with progress saved per project.
 - Next: add a maintenance and support request queue (Phase 3).
+
+### Phase 3 - Managed service workflow
+
+- Done: support and maintenance request queue on the client dashboard so clients can log requests, track status, and withdraw open ones without email.
+- Next: surface request status transitions for the team (admin-side queue) and add basic service health indicators.
