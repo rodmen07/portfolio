@@ -14,7 +14,8 @@ Production-grade cloud engineering portfolio in Rust, Python, TypeScript, Go, an
 
 A multi-service cloud platform with production-grade patterns:
 
-- **InfraPortal** — 11-service CRM platform on GCP Cloud Run with PostgreSQL, JWT auth, and an LLM-backed planner (Claude + Gemini). React 19 client portal with GitHub + Google OAuth.
+- **InfraPortal** — 11-service CRM platform on GCP Cloud Run with PostgreSQL, JWT auth, and an LLM-backed planner (Claude + Gemini). React 19 client portal with GitHub + Google OAuth, plus productized consulting and launch support offers.
+  The public-facing portfolio now foregrounds paid discovery, launch sprints, and retainer offers so the site drives direct consulting inquiries.
 - **SOC 2 baseline** — Cloud-agnostic Terraform module implementing 9 SOC 2 Type II controls on both GCP and AWS.
 - **Multi-environment CI/CD** — GitHub Actions reference with OIDC-only credentials, manual approval gates, and automated rollback.
 - **Observaboard** — Django 5 + Celery webhook ingestion with PostgreSQL full-text search and dual JWT/API-key auth.
