@@ -6,6 +6,14 @@ Planned -> Implemented -> Published.
 
 Last synchronized: 2026-05-17
 
+## v1.16 - Monetization Funnel Polish ✅ Complete
+
+| Sub-version | Feature | Status |
+|-------------|---------|--------|
+| v1.16.1 | homepage pricing teaser with direct paid engagement CTAs | ✅ Published |
+| v1.16.2 | hero and pricing copy tuned toward paid discovery and proposals | ✅ Published |
+| v1.16.3 | README updated to reflect the productized consulting funnel | ✅ Published |
+
 ## v1.15 - Deployment Safety, SLO Monitoring & Distributed State ✅ Complete
 
 | Sub-version | Feature | Status |

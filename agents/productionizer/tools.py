@@ -4,9 +4,23 @@ Agent tools for the fullstack productionizer — multi-repo, Claude API format.
 from __future__ import annotations
 
 import pathlib
+import shlex
 import subprocess
 
 from repos import REPOS
+
+# Shell control operators that enable command chaining, piping, backgrounding,
+# or substitution. They are rejected outright so a single run_shell call can
+# only ever execute one command, closing blocklist-bypass vectors.
+_SHELL_OPERATORS = (";", "&&", "||", "|", "&", "$(", "${", "`", "\n", ">", "<")
+
+# Programs that re-introduce a shell/eval layer. Allowing these would defeat the
+# shell=False execution model and re-enable arbitrary command execution.
+_SHELL_INTERPRETERS = {
+    "bash", "sh", "zsh", "fish", "dash", "ksh",
+    "cmd", "cmd.exe", "powershell", "powershell.exe", "pwsh", "pwsh.exe",
+    "env", "eval", "xargs", "nohup", "setsid",
+}
 
 
 def _sanitize(content: str) -> str:
@@ -87,14 +101,51 @@ def run_shell(repo: str, command: str) -> str:
         return f"ERROR: unknown repo '{repo}'"
 
     stripped = command.strip()
+    if not stripped:
+        return "ERROR: empty command"
+
+    # Reject shell control operators. Each call must run exactly one command;
+    # this blocks blocklist-bypass chaining such as 'echo ok && rm -rf .' or
+    # '$(rm -rf .)' that string-prefix checks alone cannot catch.
+    for operator in _SHELL_OPERATORS:
+        if operator in stripped:
+            return (
+                f"ERROR: shell operator '{operator.strip()}' is not allowed. "
+                "Run a single command per call (no chaining, pipes, background, "
+                "or command substitution)."
+            )
+
+    # Tokenize so the command runs WITHOUT a shell (shell=False below). This is
+    # the core mitigation: the OS executes argv directly, so shell metacharacters
+    # can never be interpreted.
+    try:
+        argv = shlex.split(stripped)
+    except ValueError as exc:
+        return f"ERROR: could not parse command: {exc}"
+    if not argv:
+        return "ERROR: empty command"
+
+    # Block invoking a shell/eval wrapper directly, which would defeat
+    # shell=False and re-enable arbitrary command execution.
+    program = pathlib.PurePosixPath(argv[0]).name.lower()
+    if program in _SHELL_INTERPRETERS:
+        return (
+            f"ERROR: invoking '{program}' is not allowed; "
+            "call the target command directly."
+        )
+
+    # Token-accurate blocklist match: compare leading argv tokens against each
+    # forbidden prefix so 'rm ' blocks 'rm -rf' but not 'rmdir'.
     for blocked in cfg.forbidden_shell_prefixes:
-        if stripped.startswith(blocked):
-            return f"ERROR: '{blocked.strip()}' commands are blocked in {repo}."
+        btokens = blocked.split()
+        if btokens and argv[: len(btokens)] == btokens:
+            return f"ERROR: '{' '.join(btokens)}' commands are blocked in {repo}."
 
     try:
         result = subprocess.run(
-            stripped,
-            shell=True,
+            argv,
+            shell=False,
+            check=False,
             capture_output=True,
             text=True,
             cwd=str(cfg.path),
@@ -102,6 +153,8 @@ def run_shell(repo: str, command: str) -> str:
         )
         output = (result.stdout + result.stderr)[:10_000]
         return output or "(no output)"
+    except FileNotFoundError:
+        return f"ERROR: command not found: {argv[0]}"
     except subprocess.TimeoutExpired:
         return "ERROR: command timed out after 180 seconds"
     except Exception as exc:
