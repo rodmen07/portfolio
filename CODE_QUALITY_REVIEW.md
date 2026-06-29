@@ -593,17 +593,17 @@ The Portfolio project demonstrates **strong architectural patterns** and **produ
 
 ### High Priority (Start This Week)
 
-- [ ] **Add type checking to Python CI** - `mypy --strict` or pyright
+- [x] **Add type checking to Python CI** - `mypy --strict` or pyright
   - **Effort:** 2 hours
   - **Impact:** Catch type errors before runtime
   - **File:** Add step to `.github/workflows/python-*.yml`
 
-- [ ] **Create ERROR_CODES.md reference**
+- [x] **Create ERROR_CODES.md reference**
   - **Effort:** 4 hours (audit all services, document)
   - **Impact:** Easier client integration, faster debugging
   - **File:** `docs/ERROR_CODES.md`
 
-- [ ] **Add code coverage reporting to CI**
+- [x] **Add code coverage reporting to CI**
   - **Effort:** 3 hours (add tarpaulin, pytest --cov, go coverage)
   - **Impact:** Track coverage trend, block regressions
   - **Files:** `microservices/.github/workflows/rust.yml`, each Python service CI, go-gateway CI
@@ -620,7 +620,7 @@ The Portfolio project demonstrates **strong architectural patterns** and **produ
   - **Impact:** Consistent test patterns across services
   - **File:** `docs/TESTING.md`
 
-- [ ] **Add submodule integrity validation to CI**
+- [x] **Add submodule integrity validation to CI**
   - **Effort:** 3 hours
   - **Impact:** Prevent broken submodule pointer merges
   - **File:** `.github/workflows/submodule-integrity.yml`
