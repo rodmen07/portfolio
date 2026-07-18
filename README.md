@@ -6,6 +6,8 @@ Production-grade cloud engineering portfolio in Rust, Python, TypeScript, Go, an
 
 **Live site:** https://rodmen07.github.io/infraportal/
 
+> **Status (June 2026):** The platform ran in production on GCP Cloud Run and Fly.io, then was deliberately decommissioned to $0/month as a FinOps exercise: databases and registries deleted, volumes destroyed, every recurring line item eliminated. Standing infrastructure up is half the job; turning it off cleanly is the other half. All source, architecture docs, and case studies remain public, and the reusable parts live on as published Rust crates: [axum-api-kit](https://crates.io/crates/axum-api-kit), [slokit](https://crates.io/crates/slokit), and [svccat](https://crates.io/crates/svccat). Full story: [case studies](https://rodmen07.github.io/infraportal/#/case-studies).
+
 ---
 
 ## Overview
@@ -109,7 +111,7 @@ React 19 / Vite UI (GitHub Pages: infraportal)
   event-stream-service (Go SSE, ring-buffer replay)
 ```
 
-**Deployment:** GCP Cloud Run (us-central1) for most services; Fly.io for task-api, ai-orchestrator, event-stream, observaboard. Cloud SQL instance: `microservices-489413:us-south1:microservices-pg`.
+**Deployment (historical):** GCP Cloud Run (us-central1) for most services with Cloud SQL PostgreSQL; Fly.io for task-api, ai-orchestrator, event-stream, observaboard. All backend infrastructure was decommissioned to zero recurring cost in June 2026 (see the status note at the top).
 
 ---
 
@@ -245,7 +247,7 @@ Confirmed vulnerabilities are tracked as private security advisories, fixed on a
 ### In Scope
 
 - Source code and CI workflows in this repository and submodules
-- Live deployments listed in `docs/ARCHITECTURE.md` deployment table
+- (Live deployments were decommissioned in June 2026; only the GitHub Pages frontend remains)
 
 ### Out of Scope
 
@@ -343,25 +345,13 @@ cargo test
 
 ## Deployment summary
 
-| App | Platform | URL |
-|-----|----------|-----|
-| infraportal | GitHub Pages | https://rodmen07.github.io/infraportal/ |
-| auth-service | GCP Cloud Run | https://auth-service-5gcrg4oiza-uc.a.run.app |
-| go-gateway | GCP Cloud Run | https://go-gateway-5gcrg4oiza-uc.a.run.app |
-| projects-service | GCP Cloud Run | https://projects-service-5gcrg4oiza-uc.a.run.app |
-| accounts-service | GCP Cloud Run | https://accounts-service-5gcrg4oiza-uc.a.run.app |
-| contacts-service | GCP Cloud Run | https://contacts-service-5gcrg4oiza-uc.a.run.app |
-| activities-service | GCP Cloud Run | https://activities-service-5gcrg4oiza-uc.a.run.app |
-| automation-service | GCP Cloud Run | https://automation-service-5gcrg4oiza-uc.a.run.app |
-| integrations-service | GCP Cloud Run | https://integrations-service-5gcrg4oiza-uc.a.run.app |
-| opportunities-service | GCP Cloud Run | https://opportunities-service-5gcrg4oiza-uc.a.run.app |
-| reporting-service | GCP Cloud Run | https://reporting-service-5gcrg4oiza-uc.a.run.app |
-| search-service | GCP Cloud Run | https://search-service-5gcrg4oiza-uc.a.run.app |
-| task-api-service | Fly.io | https://backend-service-rodmen07-v2.fly.dev |
-| ai-orchestrator | Fly.io | https://ai-orchestrator-service-rodmen07.fly.dev |
-| dashboard (Rust) | Fly.io | https://dynamodb-dashboard-rodmen07.fly.dev |
-| observaboard | Fly.io | https://observaboard-rodmen07.fly.dev |
-| event-stream-service | Fly.io | https://event-stream-service.fly.dev |
+Only the frontend remains deployed. Every backend service was decommissioned to zero recurring cost in June 2026 (see the status note at the top); each can be redeployed from source via the GitHub Actions workflows in this repository.
+
+| App | Platform | Status |
+|-----|----------|--------|
+| infraportal | GitHub Pages | Live: https://rodmen07.github.io/infraportal/ |
+| 11 Rust CRM services, go-gateway, auth-service, projects-service | GCP Cloud Run (us-central1) | Decommissioned June 2026 |
+| task-api, ai-orchestrator, observaboard, event-stream, DynamoDB dashboard | Fly.io | Decommissioned June 2026 |
 
 ---
 
