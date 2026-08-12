@@ -10,7 +10,7 @@ This repository contains two independent projects sharing a home directory. Futu
 |------|---------|
 | `Projects/Portfolio/` | Multi-service cloud engineering platform (16 services, Rust/Python/Go/TypeScript, GCP/Fly.io) |
 | `Projects/new_game/` | Bevy ECS life-sim game, Rust Edition 2024, Browser-native (wasm) |
-| `Projects/SpendSteward/` | Separate side project (Render-deployed) — see its own README |
+| `Projects/SpendSteward/` | DECOMMISSIONED 2026-07-21. Retired side project, hosted infra deleted, repo archived. Do not deploy or extend; see its DECOMMISSION.md |
 
 When asked to work on code, confirm which project is in scope before proceeding.
 
