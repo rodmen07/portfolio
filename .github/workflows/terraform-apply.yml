@@ -119,7 +119,7 @@ jobs:
           steps.config.outputs.enabled == 'true' &&
           steps.config.outputs.infracost_enabled == 'true' &&
           github.event_name == 'pull_request'
-        uses: infracost/actions/setup@fb736a8f219195d6efdca58682069b16fe1bc280 # v4
+        uses: infracost/actions/setup@a5783eb98adc93aa7a0049fce0abb06fdd30770a # v5.0.1
         with:
           api-key: ${{ secrets.INFRACOST_API_KEY }}
 
